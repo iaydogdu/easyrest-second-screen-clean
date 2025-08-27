@@ -27,8 +27,8 @@
     <!-- Ana Container - Ekranı ikiye böl -->
     <div class="h-full w-full flex">
       
-      <!-- SOL TARAF - Sipariş Özeti (70% genişlik) -->
-      <div class="w-7/10 h-full flex flex-col p-4" style="width: 70%;">
+      <!-- SOL TARAF - Sipariş Özeti (50% genişlik) -->
+      <div class="w-1/2 h-full flex flex-col p-4">
         <div class="text-center mb-4 p-2">
           <h2 id="baslikText" class="text-2xl font-bold tracking-wide">Sipariş Bekleniyor</h2>
           <div id="orderNo" class="text-sm text-yellow-300 mt-1"></div>
@@ -53,8 +53,8 @@
         </div>
       </div>
       
-      <!-- SAĞ TARAF - Reklam Alanı (30% genişlik) -->
-      <div class="h-full flex flex-col bg-gradient-to-b from-purple-800 to-purple-900 border-l-4 border-purple-600" style="width: 30%;">
+      <!-- SAĞ TARAF - Reklam Alanı (50% genişlik) -->
+      <div class="w-1/2 h-full flex flex-col bg-gradient-to-b from-purple-800 to-purple-900 border-l-4 border-purple-600 relative">
         <!-- Reklam Container - Yükseklik sınırlı -->
         <div id="reklamContainer" class="flex-1 flex items-center justify-center p-4 max-h-full overflow-hidden">
           <!-- Varsayılan Reklam (sipariş yokken) -->
@@ -78,6 +78,17 @@
         <!-- Alt Bilgi - Sabit -->
         <div class="p-3 text-center border-t border-purple-600 mt-auto">
           <p class="text-purple-300 text-xs">Siparişiniz hazırlanıyor...</p>
+        </div>
+        
+        <!-- Versiyon ve Update Göstergesi - Sağ Alt Köşe -->
+        <div class="absolute bottom-2 right-2 text-right">
+          <div class="flex items-center gap-2">
+                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.1.6</span>
+            <div id="updateLoader" class="hidden">
+              <div class="w-3 h-3 border border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          </div>
+          <div id="updateStatus" class="text-purple-400 text-xs mt-1 opacity-0 transition-opacity duration-300"></div>
         </div>
       </div>
       
@@ -252,17 +263,57 @@
         }, 5000);
       }
       
+      // Update gösterge fonksiyonları
+      function showUpdateLoader(show = true) {
+        const loader = document.getElementById('updateLoader');
+        const status = document.getElementById('updateStatus');
+        
+        if (show) {
+          loader.classList.remove('hidden');
+          status.textContent = 'Kontrol ediliyor...';
+          status.classList.remove('opacity-0');
+        } else {
+          loader.classList.add('hidden');
+          status.classList.add('opacity-0');
+          setTimeout(() => {
+            status.textContent = '';
+          }, 300);
+        }
+      }
+      
+      function updateVersionDisplay(version) {
+        const versionText = document.getElementById('versionText');
+        if (version) {
+          versionText.textContent = version;
+        }
+      }
+      
       // Update event listeners
+      ipcRenderer.on('update-checking', () => {
+        showUpdateLoader(true);
+        console.log('🔄 Update kontrolü başladı');
+      });
+      
       ipcRenderer.on('update-available', (event, info) => {
         showUpdateNotification(`Yeni sürüm (${info.version}) indiriliyor...`, 'info');
+        const status = document.getElementById('updateStatus');
+        status.textContent = `v${info.version} indiriliyor...`;
+        status.classList.remove('opacity-0');
+      });
+      
+      ipcRenderer.on('update-not-available', () => {
+        showUpdateLoader(false);
+        console.log('✅ Güncel sürüm kullanılıyor');
       });
       
       ipcRenderer.on('update-downloaded', () => {
-        showUpdateNotification('Güncelleme tamamlandı! 3 saniye sonra yeniden başlayacak...', 'success');
+        showUpdateNotification('Güncelleme tamamlandı! 5 saniye sonra yeniden başlayacak...', 'success');
+        showUpdateLoader(false);
       });
       
       ipcRenderer.on('update-error', (event, error) => {
         showUpdateNotification('Güncelleme hatası: ' + error.message, 'error');
+        showUpdateLoader(false);
       });
       
       ipcRenderer.on('data:update', (_e,d)=>render(d||{}));

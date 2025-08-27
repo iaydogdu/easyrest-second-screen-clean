@@ -1,4 +1,5 @@
-const { app, BrowserWindow, screen, ipcMain, autoUpdater, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const express = require('express');
 
@@ -8,71 +9,76 @@ let server = null;
 const HTTP_PORT = process.env.SECOND_SCREEN_PORT || 37251;
 
 // AutoUpdater ayarları - sadece packaged uygulamada çalışır
-const isDev = !app.isPackaged;
+const isDev = false; // TEST İÇİN GEÇİCİ OLARAK FALSE
 
 if (!isDev) {
-  console.log('[AutoUpdater] Production modu - Güvenli otomatik güncelleme aktif');
+  console.log('[AutoUpdater] Production modu - electron-updater kullaniliyor');
   
-  // Güvenli AutoUpdater ayarları
-  try {
-    // GitHub Releases URL'i manuel olarak ayarla
-    const updateUrl = `https://github.com/iaydogdu/easyrest-second-screen-clean/releases/latest/download/latest.yml`;
-    console.log('[AutoUpdater] Update URL:', updateUrl);
+  // electron-updater ayarlari
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  
+  // Development modunda da çalışması için zorla
+  autoUpdater.forceDevUpdateConfig = true;
+  
+  // GitHub repository ayarlari
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'iaydogdu',
+    repo: 'easyrest-second-screen-clean',
+    private: false
+  });
+  
+  // Event handlerlar
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[AutoUpdater] Guncelleme kontrol ediliyor...');
+    if (win && win.webContents) {
+      win.webContents.send('update-checking');
+    }
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] Guncelleme mevcut:', info.version);
+    if (win && win.webContents) {
+      win.webContents.send('update-available', info);
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('[AutoUpdater] Son surum kullaniliyor.');
+    if (win && win.webContents) {
+      win.webContents.send('update-not-available');
+    }
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.log('[AutoUpdater] Guncelleme hatasi:', err.message);
+    if (win && win.webContents) {
+      win.webContents.send('update-error', err);
+    }
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    const percent = Math.round(progressObj.percent);
+    console.log(`[AutoUpdater] Indiriliyor: ${percent}%`);
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    console.log('[AutoUpdater] Guncelleme hazir! 5 saniye sonra yeniden baslatilacak...');
+    if (win && win.webContents) {
+      win.webContents.send('update-downloaded');
+    }
     
-    // Event handler'ları önce tanımla
-    autoUpdater.on('checking-for-update', () => {
-      console.log('[AutoUpdater] Güncelleme kontrol ediliyor...');
-    });
-
-    autoUpdater.on('update-available', (info) => {
-      console.log('[AutoUpdater] Güncelleme mevcut:', info.version);
-      if (win && win.webContents) {
-        win.webContents.send('update-available', info);
-      }
-    });
-
-    autoUpdater.on('update-not-available', () => {
-      console.log('[AutoUpdater] Son sürüm kullanılıyor.');
-    });
-
-    autoUpdater.on('error', (err) => {
-      console.log('[AutoUpdater] Güncelleme hatası (normal):', err.message);
-      // Hata durumunda sessiz kalır, crash etmez
-    });
-
-    autoUpdater.on('download-progress', (progressObj) => {
-      const percent = Math.round(progressObj.percent);
-      console.log(`[AutoUpdater] İndiriliyor: ${percent}%`);
-    });
-
-    autoUpdater.on('update-downloaded', () => {
-      console.log('[AutoUpdater] Güncelleme hazır! 5 saniye sonra yeniden başlatılacak...');
-      if (win && win.webContents) {
-        win.webContents.send('update-downloaded');
-      }
-      
-      // 5 saniye bekle ve otomatik yeniden başlat
-      setTimeout(() => {
-        console.log('[AutoUpdater] Yeniden başlatılıyor...');
-        autoUpdater.quitAndInstall();
-      }, 5000);
-    });
-
-    // GitHub Releases için feed URL ayarla
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'iaydogdu',
-      repo: 'easyrest-second-screen-clean',
-      private: false
-    });
-    
-    console.log('[AutoUpdater] GitHub Releases bağlantısı kuruldu');
-    
-  } catch (error) {
-    console.log('[AutoUpdater] Kurulum hatası (devam ediyor):', error.message);
-  }
+    // 5 saniye bekle ve otomatik yeniden başlat
+    setTimeout(() => {
+      console.log('[AutoUpdater] Yeniden baslatiliyor...');
+      autoUpdater.quitAndInstall();
+    }, 5000);
+  });
+  
+  console.log('[AutoUpdater] electron-updater hazir - GitHub: iaydogdu/easyrest-second-screen-clean');
 } else {
-  console.log('[AutoUpdater] Development modu - güncelleme kontrolü devre dışı');
+  console.log('[AutoUpdater] Development modu - guncelleme kontrolu devre disi');
 }
 
 function createWindow() {
@@ -147,23 +153,23 @@ app.whenReady().then(() => {
   if (!isDev) {
     // 5 saniye sonra ilk kontrol
     setTimeout(() => {
-      console.log('[AutoUpdater] İlk güncelleme kontrolü başlatılıyor...');
+      console.log('[AutoUpdater] Ilk guncelleme kontrolu baslatiliyor...');
       try {
-        autoUpdater.checkForUpdatesAndNotify();
+        autoUpdater.checkForUpdates();
       } catch (error) {
-        console.log('[AutoUpdater] İlk kontrol hatası (normal):', error.message);
+        console.log('[AutoUpdater] Ilk kontrol hatasi (normal):', error.message);
       }
     }, 5000);
     
-    // Her 10 dakikada bir kontrol et
+    // TEST: Her 10 saniyede bir kontrol et (geçici)
     setInterval(() => {
-      console.log('[AutoUpdater] Periyodik güncelleme kontrolü...');
+      console.log('[AutoUpdater] TEST - Periyodik guncelleme kontrolu (10sn)...');
       try {
-        autoUpdater.checkForUpdatesAndNotify();
+        autoUpdater.checkForUpdates();
       } catch (error) {
-        console.log('[AutoUpdater] Periyodik kontrol hatası (normal):', error.message);
+        console.log('[AutoUpdater] Periyodik kontrol hatasi (normal):', error.message);
       }
-    }, 10 * 60 * 1000); // 10 dakika
+    }, 10 * 1000); // 10 saniye - TEST İÇİN
   }
 });
 
