@@ -30,7 +30,7 @@
       <!-- SOL TARAF - Sipariş Özeti (70% genişlik) -->
       <div class="w-7/10 h-full flex flex-col p-4" style="width: 70%;">
         <div class="text-center mb-4 p-2">
-          <h2 class="text-2xl font-bold tracking-wide">Sipariş Özeti</h2>
+          <h2 id="baslikText" class="text-2xl font-bold tracking-wide">Sipariş Bekleniyor</h2>
           <div id="orderNo" class="text-sm text-yellow-300 mt-1"></div>
         </div>
         <!-- Arka plan resmi (sipariş yokken ortada) -->
@@ -178,10 +178,21 @@
         document.getElementById('total').textContent = typeof payload.totalAmount==='number' ? (payload.totalAmount.toFixed(2)+' ₺') : '';
         const logo=document.getElementById('logo'); if(payload.logoUrl){ logo.src=payload.logoUrl; logo.classList.remove('hidden'); }
         
+        // Dinamik başlık güncelleme
+        const baslikText = document.getElementById('baslikText');
+        const hasOrders = Array.isArray(payload.orderItems) && payload.orderItems.length > 0;
+        
+        if (hasOrders) {
+          baslikText.textContent = 'Siparişiniz';
+          console.log('🎯 Başlık güncellendi: Siparişiniz');
+        } else {
+          baslikText.textContent = 'Sipariş Bekleniyor';
+          console.log('🎯 Başlık güncellendi: Sipariş Bekleniyor');
+        }
+        
         // Arka plan resmi kontrolü - Artık sağ tarafta göster
         const arkaPlanContainer = document.getElementById('arkaPlanContainer');
         const itemsContainer = document.getElementById('items');
-        const hasOrders = Array.isArray(payload.orderItems) && payload.orderItems.length > 0;
         
         // Sol taraf - sipariş listesi her zaman görünür
         arkaPlanContainer.classList.add('hidden');
