@@ -103,6 +103,10 @@ function createWindow() {
   });
 
   win.setMenuBarVisibility(false);
+  
+  // Console görünür yapmak için (TEST İÇİN)
+  win.webContents.openDevTools();
+  
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.on('closed', () => { win = null; });
 }
@@ -169,7 +173,7 @@ app.whenReady().then(() => {
       } catch (error) {
         console.log('[AutoUpdater] Periyodik kontrol hatasi (normal):', error.message);
       }
-    }, 10 * 1000); // 10 saniye - TEST İÇİN
+    }, 5 * 1000); // 5 saniye - TEST İÇİN
   }
 });
 
