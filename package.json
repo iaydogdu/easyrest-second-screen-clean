@@ -1,6 +1,6 @@
 {
   "name": "easyrest-second-screen-clean",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Electron tabanlı ikinci ekran - otomatik güncelleme sistemi ile",
   "main": "main.js",
   "scripts": {
