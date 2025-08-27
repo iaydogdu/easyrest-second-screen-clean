@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Sipariş Özeti</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html,body{width:100%;height:100%}
+      .custom-scrollbar::-webkit-scrollbar{width:8px}
+      .custom-scrollbar::-webkit-scrollbar-track{background:rgba(128,90,213,.2);border-radius:10px}
+      .custom-scrollbar::-webkit-scrollbar-thumb{background:rgba(168,130,253,.5);border-radius:10px}
+    </style>
+  </head>
+  <body class="h-full w-full bg-purple-900 text-white">
+    <!-- Update Bildirimi -->
+    <div id="updateNotification" class="hidden fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300">
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+        </svg>
+        <span id="updateMessage">Güncelleme mevcut!</span>
+      </div>
+    </div>
+
+    <div class="h-full w-full flex flex-col p-4">
+      <div class="text-center mb-4 p-2">
+        <h2 class="text-2xl font-bold tracking-wide">Sipariş Özeti</h2>
+        <div id="orderNo" class="text-sm text-yellow-300 mt-1"></div>
+      </div>
+      <!-- Arka plan resmi (sipariş yokken ortada) -->
+      <div id="arkaPlanContainer" class="hidden flex-1 flex items-center justify-center">
+        <img id="arkaPlanResmi" src="" alt="Arka Plan" class="max-w-full max-h-full object-contain rounded-lg shadow-lg">
+      </div>
+      
+      <!-- Sipariş listesi (sipariş varken) -->
+      <div id="items" class="flex-1 overflow-y-auto custom-scrollbar pr-2" style="padding-bottom:80px;"></div>
+      <div class="pt-4 mt-2">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-xl">Toplam</span>
+          <span id="total" class="text-2xl font-bold text-yellow-400"></span>
+        </div>
+        <div class="flex justify-end mt-4">
+          <img id="logo" src="" alt="Logo" class="h-8 hidden cursor-pointer">
+        </div>
+      </div>
+    </div>
+
+    <div id="gpOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 items-center justify-center">
+      <div class="bg-white text-gray-900 rounded-lg shadow-lg p-8 flex flex-col items-center relative min-w-[320px] max-w-[90vw]">
+        <h3 class="text-xl font-bold mb-4 text-purple-700">GastroPay ile Ödeme</h3>
+        <div id="gpCode" class="mb-4 hidden flex-col items-center">
+          <span class="text-lg font-semibold">Kodu Göster</span>
+          <span id="gpCodeText" class="text-3xl font-mono text-purple-700 tracking-widest mt-2"></span>
+        </div>
+        <div id="gpQr" class="mb-4 hidden flex-col items-center">
+          <span class="text-lg font-semibold">QR Kodunu Okut</span>
+          <img id="gpQrImg" class="mt-2 rounded border border-purple-200 shadow" style="width:200px;height:200px;"/>
+        </div>
+        <span id="gpClose" class="absolute top-2 right-4 text-gray-400 cursor-pointer text-2xl">&times;</span>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require('electron');
+
+      function t(node, cls, txt){ const el=document.createElement(node); if(cls) el.className=cls; if(txt!==undefined) el.textContent=txt; return el; }
+      function renderSubDetails(root, details){
+        if(!Array.isArray(details)) return;
+        const ul=t('ul','list-disc list-inside space-y-1 ml-6 mt-1');
+        details.forEach(d=>{
+          if(d?.selected){
+            const li=t('li','ml-2'); const span=t('span', (d.istenmeyen===false?'line-through text-gray-100':'text-white text-sm'),
+              (d.itemDetails?.urunAdi) || ''); 
+            if(typeof d.ekFiyat==='number' && d.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+d.ekFiyat.toFixed(2)+' ₺'));
+            li.appendChild(span); ul.appendChild(li);
+          }
+        });
+        if(ul.childElementCount>0) root.appendChild(ul);
+      }
+      function renderUrunItems(root, urunItems){
+        if(!Array.isArray(urunItems)) return;
+        const ul=t('ul','list-disc list-inside space-y-1 ml-6 mt-1');
+        urunItems.forEach(ui=>{
+          (ui.items||[]).forEach(ud=>{
+            if(ud?.selected){
+              const li=t('li','ml-2'); const span=t('span',(ud.istenmeyen===false?'line-through text-gray-100':'text-white text-sm'),
+                (ud.itemId?.urunAdi) || '');
+              if(typeof ud.ekFiyat==='number' && ud.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+ud.ekFiyat.toFixed(2)+' ₺'));
+              li.appendChild(span); ul.appendChild(li);
+            }
+          });
+        });
+        if(ul.childElementCount>0) root.appendChild(ul);
+      }
+      function renderItems(container, items){
+        container.innerHTML='';
+        (items||[]).forEach(item=>{
+          const wrap=t('div','mb-4');
+          const head=t('div','flex items-center justify-between mb-2');
+          const left=t('div','flex items-center gap-2'); left.appendChild(t('span','text-white font-bold',`${item.miktar||1} x ${item.urunAdi||''}`));
+          const right=t('span','text-yellow-400 font-bold',(((+item.vergiliFiyat||0)*(item.miktar||1)).toFixed(2)+' ₺'));
+          head.appendChild(left); head.appendChild(right); wrap.appendChild(head);
+
+          if(Array.isArray(item.items)&&item.items.length>0){
+            const ul=t('ul','list-disc list-inside space-y-1');
+            item.items.forEach(sub=>{
+              if(sub?.selected){
+                const li=t('li','ml-2'); const span=t('span',(sub.istenmeyen===false?'line-through text-gray-100':'text-white'),
+                  (sub.itemDetails?.urunAdi)||'');
+                if(typeof sub.ekFiyat==='number' && sub.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+sub.ekFiyat.toFixed(2)+' ₺'));
+                li.appendChild(span);
+                if(Array.isArray(sub.itemDetails?.items)) renderSubDetails(li, sub.itemDetails.items);
+                if(Array.isArray(sub.itemDetails?.urunItems)) renderUrunItems(li, sub.itemDetails.urunItems);
+                ul.appendChild(li);
+              }
+            });
+            wrap.appendChild(ul);
+          }
+          container.appendChild(wrap);
+        });
+      }
+      function adoptCss(payload){
+        if (Array.isArray(payload.cssUrls)) payload.cssUrls.forEach(u=>{
+          if(!u) return; if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(l=>l.href===u)) return;
+          const link=document.createElement('link'); link.rel='stylesheet'; link.href=u; link.crossOrigin='anonymous'; document.head.appendChild(link);
+        });
+        if (Array.isArray(payload.inlineStyles)) payload.inlineStyles.forEach(tk=>{
+          if(!tk) return; const st=document.createElement('style'); st.textContent=tk; document.head.appendChild(st);
+        });
+        if (payload.htmlClasses) document.documentElement.className=payload.htmlClasses;
+        if (payload.bodyClasses) document.body.className=payload.bodyClasses+' bg-purple-900 text-white';
+      }
+      function render(payload){
+        console.log('🖼️ Render çağrıldı, payload:', payload);
+        console.log('🖼️ arkaPlanResmi:', payload.arkaPlanResmi);
+        console.log('🖼️ orderItems uzunluk:', payload.orderItems?.length || 0);
+        
+        adoptCss(payload);
+        document.getElementById('orderNo').textContent = payload.orderNo ? ('Sipariş No: '+payload.orderNo) : '';
+        document.getElementById('total').textContent = typeof payload.totalAmount==='number' ? (payload.totalAmount.toFixed(2)+' ₺') : '';
+        const logo=document.getElementById('logo'); if(payload.logoUrl){ logo.src=payload.logoUrl; logo.classList.remove('hidden'); }
+        
+        // Arka plan resmi kontrolü
+        const arkaPlanContainer = document.getElementById('arkaPlanContainer');
+        const arkaPlanImg = document.getElementById('arkaPlanResmi');
+        const itemsContainer = document.getElementById('items');
+        const hasOrders = Array.isArray(payload.orderItems) && payload.orderItems.length > 0;
+        
+        if (payload.arkaPlanResmi && !hasOrders) {
+          // Sipariş yok + arka plan resmi var = resmi ortada göster
+          console.log('🖼️ Arka plan resmi gösteriliyor:', payload.arkaPlanResmi);
+          arkaPlanImg.src = payload.arkaPlanResmi;
+          arkaPlanContainer.classList.remove('hidden');
+          itemsContainer.classList.add('hidden');
+        } else {
+          // Sipariş var veya arka plan resmi yok = sipariş listesini göster
+          console.log('🖼️ Sipariş listesi gösteriliyor. Arka plan:', !!payload.arkaPlanResmi, 'Sipariş var:', hasOrders);
+          arkaPlanContainer.classList.add('hidden');
+          itemsContainer.classList.remove('hidden');
+        }
+        
+        renderItems(itemsContainer, payload.orderItems||[]);
+        const ov=document.getElementById('gpOverlay'); const gpCode=document.getElementById('gpCode'); const gpQr=document.getElementById('gpQr');
+        if(payload.gastroPayCodeToken || payload.gastroPayQrToken){
+          ov.classList.remove('hidden'); ov.classList.add('flex');
+          if(payload.gastroPayCodeToken){ gpCode.classList.remove('hidden'); document.getElementById('gpCodeText').textContent=payload.gastroPayCodeToken; }
+          if(payload.gastroPayQrToken){ gpQr.classList.remove('hidden'); document.getElementById('gpQrImg').src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+payload.gastroPayQrToken; }
+        }else{ ov.classList.add('hidden'); ov.classList.remove('flex'); gpCode.classList.add('hidden'); gpQr.classList.add('hidden'); }
+      }
+      
+      // Update bildirimi fonksiyonları
+      function showUpdateNotification(message, type = 'info') {
+        const notification = document.getElementById('updateNotification');
+        const messageEl = document.getElementById('updateMessage');
+        
+        messageEl.textContent = message;
+        
+        // Renk ayarı
+        notification.className = notification.className.replace(/bg-\w+-\d+/, '');
+        if (type === 'success') {
+          notification.classList.add('bg-green-600');
+        } else if (type === 'warning') {
+          notification.classList.add('bg-yellow-600');
+        } else if (type === 'error') {
+          notification.classList.add('bg-red-600');
+        } else {
+          notification.classList.add('bg-blue-600');
+        }
+        
+        notification.classList.remove('hidden');
+        
+        // 5 saniye sonra otomatik gizle
+        setTimeout(() => {
+          notification.classList.add('hidden');
+        }, 5000);
+      }
+      
+      // Update event listeners
+      ipcRenderer.on('update-available', (event, info) => {
+        showUpdateNotification(`Yeni sürüm (${info.version}) indiriliyor...`, 'info');
+      });
+      
+      ipcRenderer.on('update-downloaded', () => {
+        showUpdateNotification('Güncelleme tamamlandı! 3 saniye sonra yeniden başlayacak...', 'success');
+      });
+      
+      ipcRenderer.on('update-error', (event, error) => {
+        showUpdateNotification('Güncelleme hatası: ' + error.message, 'error');
+      });
+      
+      ipcRenderer.on('data:update', (_e,d)=>render(d||{}));
+      ipcRenderer.on('data:clear', (_e,d)=>render(d||{isCompleted:true,orderItems:[],totalAmount:0}));
+      document.getElementById('gpClose').addEventListener('click',()=>{ const ov=document.getElementById('gpOverlay'); ov.classList.add('hidden'); ov.classList.remove('flex'); });
+      
+      // Logo'ya 5 kere tıklama ile uygulamayı kapat
+      let logoClickCount = 0;
+      let logoClickTimer = null;
+      document.getElementById('logo').addEventListener('click', () => {
+        logoClickCount++;
+        if (logoClickTimer) clearTimeout(logoClickTimer);
+        
+        if (logoClickCount >= 5) {
+          // 5 kere tıklandı - uygulamayı kapat
+          ipcRenderer.send('app:quit');
+        } else {
+          // 2 saniye sonra sayacı sıfırla
+          logoClickTimer = setTimeout(() => {
+            logoClickCount = 0;
+          }, 2000);
+        }
+      });
+    </script>
+  </body>
+</html>
