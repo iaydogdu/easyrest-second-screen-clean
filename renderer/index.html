@@ -83,7 +83,7 @@
         <!-- Versiyon ve Update Göstergesi - Sağ Alt Köşe -->
         <div class="absolute bottom-2 right-2 text-right">
           <div class="flex items-center gap-2">
-                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.2.1</span>
+                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.2.2</span>
             <div id="updateLoader" class="hidden">
               <div class="w-3 h-3 border border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
@@ -118,7 +118,7 @@
         const ul=t('ul','list-disc list-inside space-y-1 ml-6 mt-1');
         details.forEach(d=>{
           if(d?.selected){
-            const li=t('li','ml-2'); const span=t('span', (d.istenmeyen===false?'line-through text-gray-100':'text-white text-sm'),
+            const li=t('li','ml-2'); const span=t('span', (d.istenmeyen===false?'line-through text-gray-100 capitalize':'text-white text-sm capitalize'),
               (d.itemDetails?.urunAdi) || ''); 
             if(typeof d.ekFiyat==='number' && d.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+d.ekFiyat.toFixed(2)+' ₺'));
             li.appendChild(span); ul.appendChild(li);
@@ -132,7 +132,7 @@
         urunItems.forEach(ui=>{
           (ui.items||[]).forEach(ud=>{
             if(ud?.selected){
-              const li=t('li','ml-2'); const span=t('span',(ud.istenmeyen===false?'line-through text-gray-100':'text-white text-sm'),
+              const li=t('li','ml-2'); const span=t('span',(ud.istenmeyen===false?'line-through text-gray-100 capitalize':'text-white text-sm capitalize'),
                 (ud.itemId?.urunAdi) || '');
               if(typeof ud.ekFiyat==='number' && ud.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+ud.ekFiyat.toFixed(2)+' ₺'));
               li.appendChild(span); ul.appendChild(li);
