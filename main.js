@@ -9,7 +9,7 @@ let server = null;
 const HTTP_PORT = process.env.SECOND_SCREEN_PORT || 37251;
 
 // AutoUpdater ayarları - sadece packaged uygulamada çalışır
-const isDev = false; // TEST İÇİN GEÇİCİ OLARAK FALSE
+const isDev = !app.isPackaged;
 
 if (!isDev) {
   console.log('[AutoUpdater] Production modu - electron-updater kullaniliyor');
@@ -17,9 +17,6 @@ if (!isDev) {
   // electron-updater ayarlari
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  
-  // Development modunda da çalışması için zorla
-  autoUpdater.forceDevUpdateConfig = true;
   
   // GitHub repository ayarlari
   autoUpdater.setFeedURL({
@@ -165,15 +162,15 @@ app.whenReady().then(() => {
       }
     }, 5000);
     
-    // TEST: Her 10 saniyede bir kontrol et (geçici)
+    // Her 5 dakikada bir periyodik kontrol
     setInterval(() => {
-      console.log('[AutoUpdater] TEST - Periyodik guncelleme kontrolu (10sn)...');
+      console.log('[AutoUpdater] Periyodik guncelleme kontrolu (5dk)...');
       try {
         autoUpdater.checkForUpdates();
       } catch (error) {
         console.log('[AutoUpdater] Periyodik kontrol hatasi (normal):', error.message);
       }
-    }, 5 * 1000); // 5 saniye - TEST İÇİN
+    }, 5 * 60 * 1000); // 5 dakika
   }
 });
 
