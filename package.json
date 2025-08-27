@@ -1,6 +1,6 @@
 {
   "name": "easyrest-second-screen-clean",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Electron tabanlı ikinci ekran - otomatik güncelleme sistemi ile",
   "main": "main.js",
   "scripts": {
@@ -20,9 +20,13 @@
   "build": {
     "appId": "com.easyrest.secondscreen.clean",
     "productName": "easyRest Second Screen",
-    "files": ["**/*"],
-    "win": { 
-      "target": ["nsis"]
+    "files": [
+      "**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
     },
     "nsis": {
       "oneClick": true,
