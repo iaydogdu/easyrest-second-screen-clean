@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, autoUpdater, dialog } = require('electron');
 const path = require('path');
 const express = require('express');
 
@@ -11,8 +11,66 @@ const HTTP_PORT = process.env.SECOND_SCREEN_PORT || 37251;
 const isDev = !app.isPackaged;
 
 if (!isDev) {
-  console.log('[AutoUpdater] Production modu - AutoUpdater devre dışı (güvenlik için)');
-  console.log('[AutoUpdater] Manuel güncelleme: https://github.com/iaydogdu/easyrest-second-screen-clean/releases');
+  console.log('[AutoUpdater] Production modu - Güvenli otomatik güncelleme aktif');
+  
+  // Güvenli AutoUpdater ayarları
+  try {
+    // GitHub Releases URL'i manuel olarak ayarla
+    const updateUrl = `https://github.com/iaydogdu/easyrest-second-screen-clean/releases/latest/download/latest.yml`;
+    console.log('[AutoUpdater] Update URL:', updateUrl);
+    
+    // Event handler'ları önce tanımla
+    autoUpdater.on('checking-for-update', () => {
+      console.log('[AutoUpdater] Güncelleme kontrol ediliyor...');
+    });
+
+    autoUpdater.on('update-available', (info) => {
+      console.log('[AutoUpdater] Güncelleme mevcut:', info.version);
+      if (win && win.webContents) {
+        win.webContents.send('update-available', info);
+      }
+    });
+
+    autoUpdater.on('update-not-available', () => {
+      console.log('[AutoUpdater] Son sürüm kullanılıyor.');
+    });
+
+    autoUpdater.on('error', (err) => {
+      console.log('[AutoUpdater] Güncelleme hatası (normal):', err.message);
+      // Hata durumunda sessiz kalır, crash etmez
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+      const percent = Math.round(progressObj.percent);
+      console.log(`[AutoUpdater] İndiriliyor: ${percent}%`);
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+      console.log('[AutoUpdater] Güncelleme hazır! 5 saniye sonra yeniden başlatılacak...');
+      if (win && win.webContents) {
+        win.webContents.send('update-downloaded');
+      }
+      
+      // 5 saniye bekle ve otomatik yeniden başlat
+      setTimeout(() => {
+        console.log('[AutoUpdater] Yeniden başlatılıyor...');
+        autoUpdater.quitAndInstall();
+      }, 5000);
+    });
+
+    // GitHub Releases için feed URL ayarla
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'iaydogdu',
+      repo: 'easyrest-second-screen-clean',
+      private: false
+    });
+    
+    console.log('[AutoUpdater] GitHub Releases bağlantısı kuruldu');
+    
+  } catch (error) {
+    console.log('[AutoUpdater] Kurulum hatası (devam ediyor):', error.message);
+  }
 } else {
   console.log('[AutoUpdater] Development modu - güncelleme kontrolü devre dışı');
 }
@@ -84,6 +142,29 @@ app.whenReady().then(() => {
   createHttpServer(); 
   
   console.log('[App] Uygulama başlatıldı - Server: 127.0.0.1:' + HTTP_PORT);
+  
+  // Otomatik güncelleme kontrolü (sadece production'da)
+  if (!isDev) {
+    // 5 saniye sonra ilk kontrol
+    setTimeout(() => {
+      console.log('[AutoUpdater] İlk güncelleme kontrolü başlatılıyor...');
+      try {
+        autoUpdater.checkForUpdatesAndNotify();
+      } catch (error) {
+        console.log('[AutoUpdater] İlk kontrol hatası (normal):', error.message);
+      }
+    }, 5000);
+    
+    // Her 10 dakikada bir kontrol et
+    setInterval(() => {
+      console.log('[AutoUpdater] Periyodik güncelleme kontrolü...');
+      try {
+        autoUpdater.checkForUpdatesAndNotify();
+      } catch (error) {
+        console.log('[AutoUpdater] Periyodik kontrol hatası (normal):', error.message);
+      }
+    }, 10 * 60 * 1000); // 10 dakika
+  }
 });
 
 app.on('activate', () => { 
