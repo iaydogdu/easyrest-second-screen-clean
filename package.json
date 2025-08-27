@@ -1,6 +1,6 @@
 {
   "name": "easyrest-second-screen-clean",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Electron tabanlı ikinci ekran - otomatik güncelleme sistemi ile",
   "main": "main.js",
   "scripts": {
@@ -31,8 +31,8 @@
     },
     "nsis": {
       "oneClick": true,
-      "perMachine": true,
-      "allowElevation": true,
+      "perMachine": false,
+      "allowElevation": false,
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
