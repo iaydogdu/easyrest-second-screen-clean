@@ -83,7 +83,7 @@
         <!-- Versiyon ve Update Göstergesi - Sağ Alt Köşe -->
         <div class="absolute bottom-2 right-2 text-right">
           <div class="flex items-center gap-2">
-                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.2.2</span>
+                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.2.3</span>
             <div id="updateLoader" class="hidden">
               <div class="w-3 h-3 border border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
@@ -118,8 +118,10 @@
         const ul=t('ul','list-disc list-inside space-y-1 ml-6 mt-1');
         details.forEach(d=>{
           if(d?.selected){
-            const li=t('li','ml-2'); const span=t('span', (d.istenmeyen===false?'line-through text-gray-100 capitalize':'text-white text-sm capitalize'),
-              (d.itemDetails?.urunAdi) || ''); 
+            const li=t('li','ml-2'); 
+            const span=t('span', (d.istenmeyen===false?'line-through text-gray-100':'text-white text-sm'),
+              (d.itemDetails?.urunAdi) || '');
+            span.style.textTransform = 'capitalize'; 
             if(typeof d.ekFiyat==='number' && d.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+d.ekFiyat.toFixed(2)+' ₺'));
             li.appendChild(span); ul.appendChild(li);
           }
@@ -132,8 +134,10 @@
         urunItems.forEach(ui=>{
           (ui.items||[]).forEach(ud=>{
             if(ud?.selected){
-              const li=t('li','ml-2'); const span=t('span',(ud.istenmeyen===false?'line-through text-gray-100 capitalize':'text-white text-sm capitalize'),
+              const li=t('li','ml-2'); 
+              const span=t('span',(ud.istenmeyen===false?'line-through text-gray-100':'text-white text-sm'),
                 (ud.itemId?.urunAdi) || '');
+              span.style.textTransform = 'capitalize';
               if(typeof ud.ekFiyat==='number' && ud.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+ud.ekFiyat.toFixed(2)+' ₺'));
               li.appendChild(span); ul.appendChild(li);
             }
@@ -146,7 +150,10 @@
         (items||[]).forEach(item=>{
           const wrap=t('div','mb-4');
           const head=t('div','flex items-center justify-between mb-2');
-          const left=t('div','flex items-center gap-2'); left.appendChild(t('span','text-white font-bold capitalize',`${item.miktar||1} x ${item.urunAdi||''}`));
+          const left=t('div','flex items-center gap-2'); 
+          const productSpan = t('span','text-white font-bold',`${item.miktar||1} x ${item.urunAdi||''}`);
+          productSpan.style.textTransform = 'capitalize';
+          left.appendChild(productSpan);
           const right=t('span','text-yellow-400 font-bold',(((+item.vergiliFiyat||0)*(item.miktar||1)).toFixed(2)+' ₺'));
           head.appendChild(left); head.appendChild(right); wrap.appendChild(head);
 
@@ -154,8 +161,10 @@
             const ul=t('ul','list-disc list-inside space-y-1');
             item.items.forEach(sub=>{
               if(sub?.selected){
-                const li=t('li','ml-2'); const span=t('span',(sub.istenmeyen===false?'line-through text-gray-100 capitalize':'text-white capitalize'),
+                const li=t('li','ml-2'); 
+                const span=t('span',(sub.istenmeyen===false?'line-through text-gray-100':'text-white'),
                   (sub.itemDetails?.urunAdi)||'');
+                span.style.textTransform = 'capitalize';
                 if(typeof sub.ekFiyat==='number' && sub.ekFiyat>0) span.appendChild(t('span','text-green-400 ml-1','+'+sub.ekFiyat.toFixed(2)+' ₺'));
                 li.appendChild(span);
                 if(Array.isArray(sub.itemDetails?.items)) renderSubDetails(li, sub.itemDetails.items);
