@@ -24,27 +24,63 @@
       </div>
     </div>
 
-    <div class="h-full w-full flex flex-col p-4">
-      <div class="text-center mb-4 p-2">
-        <h2 class="text-2xl font-bold tracking-wide">Sipariş Özeti</h2>
-        <div id="orderNo" class="text-sm text-yellow-300 mt-1"></div>
-      </div>
-      <!-- Arka plan resmi (sipariş yokken ortada) -->
-      <div id="arkaPlanContainer" class="hidden flex-1 flex items-center justify-center">
-        <img id="arkaPlanResmi" src="" alt="Arka Plan" class="max-w-full max-h-full object-contain rounded-lg shadow-lg">
+    <!-- Ana Container - Ekranı ikiye böl -->
+    <div class="h-full w-full flex">
+      
+      <!-- SOL TARAF - Sipariş Özeti (70% genişlik) -->
+      <div class="w-7/10 h-full flex flex-col p-4" style="width: 70%;">
+        <div class="text-center mb-4 p-2">
+          <h2 class="text-2xl font-bold tracking-wide">Sipariş Özeti</h2>
+          <div id="orderNo" class="text-sm text-yellow-300 mt-1"></div>
+        </div>
+        <!-- Arka plan resmi (sipariş yokken ortada) -->
+        <div id="arkaPlanContainer" class="hidden flex-1 flex items-center justify-center">
+          <img id="arkaPlanResmi" src="" alt="Arka Plan" class="max-w-full max-h-full object-contain rounded-lg shadow-lg">
+        </div>
+        
+        <!-- Sipariş listesi (sipariş varken) -->
+        <div id="items" class="flex-1 overflow-y-auto custom-scrollbar pr-2"></div>
+        
+        <!-- Alt Kısım - Sabit -->
+        <div class="mt-auto pt-4 bg-purple-900 border-t border-purple-700">
+          <div class="flex justify-between items-center mb-4">
+            <span class="font-bold text-xl">Toplam</span>
+            <span id="total" class="text-2xl font-bold text-yellow-400"></span>
+          </div>
+          <div class="flex justify-end">
+            <img id="logo" src="" alt="Logo" class="h-8 hidden cursor-pointer">
+          </div>
+        </div>
       </div>
       
-      <!-- Sipariş listesi (sipariş varken) -->
-      <div id="items" class="flex-1 overflow-y-auto custom-scrollbar pr-2" style="padding-bottom:80px;"></div>
-      <div class="pt-4 mt-2">
-        <div class="flex justify-between items-center">
-          <span class="font-bold text-xl">Toplam</span>
-          <span id="total" class="text-2xl font-bold text-yellow-400"></span>
+      <!-- SAĞ TARAF - Reklam Alanı (30% genişlik) -->
+      <div class="h-full flex flex-col bg-gradient-to-b from-purple-800 to-purple-900 border-l-4 border-purple-600" style="width: 30%;">
+        <!-- Reklam Container - Yükseklik sınırlı -->
+        <div id="reklamContainer" class="flex-1 flex items-center justify-center p-4 max-h-full overflow-hidden">
+          <!-- Varsayılan Reklam (sipariş yokken) -->
+          <div id="varsayilanReklam" class="text-center w-full">
+            <div class="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm">
+              <h3 class="text-xl font-bold text-yellow-400 mb-3">Hoş Geldiniz!</h3>
+              <p class="text-white text-base mb-3">Lezzetli yemeklerimizi keşfedin</p>
+              <div class="w-16 h-16 mx-auto bg-yellow-400 rounded-full flex items-center justify-center mb-3">
+                <span class="text-purple-900 text-2xl font-bold">🍽️</span>
+              </div>
+              <p class="text-yellow-300 text-xs">En taze malzemeler, en lezzetli tatlar</p>
+            </div>
+          </div>
+          
+          <!-- Özel Reklam Resmi (API'den gelecek) -->
+          <div id="ozelReklam" class="hidden w-full h-full flex items-center justify-center">
+            <img id="reklamResmi" src="" alt="Reklam" class="max-w-full max-h-full object-contain rounded-lg">
+          </div>
         </div>
-        <div class="flex justify-end mt-4">
-          <img id="logo" src="" alt="Logo" class="h-8 hidden cursor-pointer">
+        
+        <!-- Alt Bilgi - Sabit -->
+        <div class="p-3 text-center border-t border-purple-600 mt-auto">
+          <p class="text-purple-300 text-xs">Siparişiniz hazırlanıyor...</p>
         </div>
       </div>
+      
     </div>
 
     <div id="gpOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 items-center justify-center">
@@ -142,23 +178,31 @@
         document.getElementById('total').textContent = typeof payload.totalAmount==='number' ? (payload.totalAmount.toFixed(2)+' ₺') : '';
         const logo=document.getElementById('logo'); if(payload.logoUrl){ logo.src=payload.logoUrl; logo.classList.remove('hidden'); }
         
-        // Arka plan resmi kontrolü
+        // Arka plan resmi kontrolü - Artık sağ tarafta göster
         const arkaPlanContainer = document.getElementById('arkaPlanContainer');
-        const arkaPlanImg = document.getElementById('arkaPlanResmi');
         const itemsContainer = document.getElementById('items');
         const hasOrders = Array.isArray(payload.orderItems) && payload.orderItems.length > 0;
         
-        if (payload.arkaPlanResmi && !hasOrders) {
-          // Sipariş yok + arka plan resmi var = resmi ortada göster
-          console.log('🖼️ Arka plan resmi gösteriliyor:', payload.arkaPlanResmi);
-          arkaPlanImg.src = payload.arkaPlanResmi;
-          arkaPlanContainer.classList.remove('hidden');
-          itemsContainer.classList.add('hidden');
+        // Sol taraf - sipariş listesi her zaman görünür
+        arkaPlanContainer.classList.add('hidden');
+        itemsContainer.classList.remove('hidden');
+        
+        // Sağ taraf - Reklam alanı kontrolü
+        const varsayilanReklam = document.getElementById('varsayilanReklam');
+        const ozelReklam = document.getElementById('ozelReklam');
+        const reklamResmi = document.getElementById('reklamResmi');
+        
+        if (payload.arkaPlanResmi) {
+          // Arka plan resmi varsa sağ tarafta göster
+          console.log('🖼️ Arka plan resmi sağ tarafta gösteriliyor:', payload.arkaPlanResmi);
+          reklamResmi.src = payload.arkaPlanResmi;
+          varsayilanReklam.classList.add('hidden');
+          ozelReklam.classList.remove('hidden');
         } else {
-          // Sipariş var veya arka plan resmi yok = sipariş listesini göster
-          console.log('🖼️ Sipariş listesi gösteriliyor. Arka plan:', !!payload.arkaPlanResmi, 'Sipariş var:', hasOrders);
-          arkaPlanContainer.classList.add('hidden');
-          itemsContainer.classList.remove('hidden');
+          // Arka plan resmi yoksa varsayılan reklamı göster
+          console.log('🖼️ Varsayılan reklam gösteriliyor');
+          varsayilanReklam.classList.remove('hidden');
+          ozelReklam.classList.add('hidden');
         }
         
         renderItems(itemsContainer, payload.orderItems||[]);
