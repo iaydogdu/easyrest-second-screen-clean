@@ -11,6 +11,17 @@
       .custom-scrollbar::-webkit-scrollbar{width:8px}
       .custom-scrollbar::-webkit-scrollbar-track{background:rgba(128,90,213,.2);border-radius:10px}
       .custom-scrollbar::-webkit-scrollbar-thumb{background:rgba(168,130,253,.5);border-radius:10px}
+      /* Para üstü alanı için özel stil - animasyonsuz gizleme */
+      #paraUstuAlani.force-hidden {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        transition: none !important;
+        animation: none !important;
+      }
+      #paraUstuAlani {
+        transition: none !important;
+      }
     </style>
   </head>
   <body class="h-full w-full bg-purple-900 text-white">
@@ -55,6 +66,47 @@
       
       <!-- SAĞ TARAF - Reklam Alanı (50% genişlik) -->
       <div class="w-1/2 h-full flex flex-col bg-gradient-to-b from-purple-800 to-purple-900 border-l-4 border-purple-600 relative">
+        
+        <!-- Para Üstü Hesaplama Alanı -->
+        <div id="paraUstuAlani" class="hidden force-hidden flex-1 flex items-center justify-center p-8">
+          <div class="bg-purple-900 bg-opacity-60 backdrop-blur-sm border-2 border-purple-400 rounded-3xl shadow-2xl p-10 max-w-lg w-full">
+            <div class="text-center mb-8">
+              <div class="inline-flex items-center justify-center w-20 h-20 bg-yellow-400 rounded-full mb-4 shadow-lg">
+                <svg class="w-12 h-12 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"></path>
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            </div>
+            
+            <div class="space-y-5">
+              <!-- Ödenecek Tutar (Toplam Sipariş) -->
+              <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-5 border border-purple-300 border-opacity-30">
+                <div class="flex justify-between items-center">
+                  <span class="text-lg font-medium text-purple-200">Ödenecek Tutar</span>
+                  <span id="odenecekTutar" class="text-3xl font-bold text-white">0.00 ₺</span>
+                </div>
+              </div>
+              
+              <!-- Alınan Tutar (Kısmi + Şu Anki) -->
+              <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-5 border border-purple-300 border-opacity-30">
+                <div class="flex justify-between items-center">
+                  <span class="text-lg font-medium text-purple-200">Alınan Tutar</span>
+                  <span id="alinanTutar" class="text-3xl font-bold text-white">0.00 ₺</span>
+                </div>
+              </div>
+              
+              <!-- Kalan Tutar veya Para Üstü (Dinamik) -->
+              <div id="kalanParaUstuContainer" class="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-5 border border-purple-300 border-opacity-30">
+                <div class="flex justify-between items-center">
+                  <span id="kalanParaUstuLabel" class="text-lg font-medium text-purple-200">Kalan Tutar</span>
+                  <span id="kalanParaUstuDeger" class="text-3xl font-bold text-white">0.00 ₺</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <!-- Reklam Container - Yükseklik sınırlı -->
         <div id="reklamContainer" class="flex-1 flex items-center justify-center p-4 max-h-full overflow-hidden">
           <!-- Varsayılan Reklam (sipariş yokken) -->
@@ -83,7 +135,7 @@
         <!-- Versiyon ve Update Göstergesi - Sağ Alt Köşe -->
         <div class="absolute bottom-2 right-2 text-right">
           <div class="flex items-center gap-2">
-                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.2.6</span>
+                          <span id="versionText" class="text-purple-300 text-xs font-mono">v0.2.7</span>
             <div id="updateLoader" class="hidden">
               <div class="w-3 h-3 border border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
@@ -94,18 +146,266 @@
       
     </div>
 
-    <div id="gpOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 items-center justify-center">
-      <div class="bg-white text-gray-900 rounded-lg shadow-lg p-8 flex flex-col items-center relative min-w-[320px] max-w-[90vw]">
-        <h3 class="text-xl font-bold mb-4 text-purple-700">GastroPay ile Ödeme</h3>
-        <div id="gpCode" class="mb-4 hidden flex-col items-center">
-          <span class="text-lg font-semibold">Kodu Göster</span>
-          <span id="gpCodeText" class="text-3xl font-mono text-purple-700 tracking-widest mt-2"></span>
+    <div id="gpOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center backdrop-blur-sm">
+      <div class="bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-purple-500">
+        <!-- Logo/Icon -->
+        <div class="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
         </div>
-        <div id="gpQr" class="mb-4 hidden flex-col items-center">
-          <span class="text-lg font-semibold">QR Kodunu Okut</span>
-          <img id="gpQrImg" class="mt-2 rounded border border-purple-200 shadow" style="width:200px;height:200px;"/>
+        
+        <h3 class="text-2xl font-bold mb-2 text-purple-700">GastroPay</h3>
+        <p class="text-sm text-gray-500 mb-6">Hızlı ve Güvenli Ödeme</p>
+        
+        <!-- Kod Gösterimi -->
+        <div id="gpCode" class="mb-6 hidden">
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 px-8 py-5 rounded-xl border-2 border-purple-300 shadow-md">
+            <p class="text-sm font-semibold text-gray-600 text-center mb-2">Ödeme Kodu</p>
+            <p id="gpCodeText" class="text-4xl font-mono font-bold text-purple-700 tracking-widest text-center"></p>
+          </div>
         </div>
-        <span id="gpClose" class="absolute top-2 right-4 text-gray-400 cursor-pointer text-2xl">&times;</span>
+        
+        <!-- QR Kod Gösterimi -->
+        <div id="gpQr" class="mb-6 hidden">
+          <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl shadow-inner">
+            <div class="bg-white p-4 rounded-xl shadow-md">
+              <img id="gpQrImg" class="rounded-lg" style="width:220px;height:220px;" alt="GastroPay QR"/>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-center space-y-2">
+          <p class="text-base font-semibold text-gray-700">Kodu Kasiyere Söyleyin veya QR Okutun</p>
+          <p class="text-sm text-gray-500">GastroPay uygulamanızı kullanın</p>
+        </div>
+        
+        <!-- Animasyonlu İşaret -->
+        <div class="mt-4 flex items-center gap-2 text-purple-600 animate-pulse">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">Ödeme bekleniyor...</span>
+        </div>
+        
+        <!-- Timer -->
+        <div class="mt-3 flex items-center gap-2 text-gray-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="gpTimer" class="text-sm font-mono">02:00</span>
+        </div>
+        
+        <span id="gpClose" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer text-3xl font-light transition-colors">&times;</span>
+      </div>
+    </div>
+
+    <!-- Edenred QR Overlay -->
+    <div id="edenredOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center backdrop-blur-sm">
+      <div class="bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-green-500">
+        <!-- Logo/Icon -->
+        <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        
+        <h3 class="text-2xl font-bold mb-2 text-green-700">Edenred Ticket Restaurant</h3>
+        <p class="text-sm text-gray-500 mb-6">Hızlı ve Güvenli Ödeme</p>
+        
+        <!-- QR Kod Container -->
+        <div class="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl mb-6 shadow-inner">
+          <div class="bg-white p-4 rounded-xl shadow-md">
+            <img id="edenredQrImg" class="rounded-lg" style="width:220px;height:220px;" alt="Edenred QR"/>
+          </div>
+        </div>
+        
+        <div class="text-center space-y-2">
+          <p class="text-base font-semibold text-gray-700">QR Kodu Okutunuz</p>
+          <p class="text-sm text-gray-500">Edenred uygulamanızı açın ve QR kodu okutun</p>
+        </div>
+        
+        <!-- Animasyonlu İşaret -->
+        <div class="mt-4 flex items-center gap-2 text-green-600 animate-pulse">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">Ödeme bekleniyor...</span>
+        </div>
+        
+        <!-- Timer -->
+        <div class="mt-3 flex items-center gap-2 text-gray-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="edenredTimer" class="text-sm font-mono">02:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yemek Kartı QR Overlay (Multinet, Setcard, Metropol) -->
+    <div id="yemekKartiOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center backdrop-blur-sm">
+      <div class="bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4" id="yemekKartiBorder">
+        <!-- Logo/Icon -->
+        <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-lg" id="yemekKartiIcon">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+        </div>
+        
+        <h3 id="yemekKartiBaslik" class="text-2xl font-bold mb-2">Yemek Kartı ile Ödeme</h3>
+        <p class="text-sm text-gray-500 mb-6">Hızlı ve Güvenli Ödeme</p>
+        
+        <!-- QR Kod Container -->
+        <div class="p-6 rounded-2xl mb-6 shadow-inner" id="yemekKartiQrBg">
+          <div class="bg-white p-4 rounded-xl shadow-md">
+            <img id="yemekKartiQrImg" class="rounded-lg" style="width:220px;height:220px;" alt="Yemek Kartı QR"/>
+          </div>
+        </div>
+        
+        <!-- Kısa Kod (Sadece Metropol için) -->
+        <div id="yemekKartiKod" class="mb-6 hidden">
+          <div class="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 rounded-xl border-2 border-purple-300 shadow-md">
+            <p class="text-sm font-semibold text-gray-600 text-center mb-2">veya Kısa Kodu Giriniz</p>
+            <p id="yemekKartiKodText" class="text-3xl font-mono font-bold text-purple-700 tracking-widest text-center"></p>
+          </div>
+        </div>
+        
+        <div class="text-center space-y-2">
+          <p class="text-base font-semibold text-gray-700">QR Kodu Okutunuz</p>
+          <p id="yemekKartiAciklama" class="text-sm text-gray-500">Uygulamanızı açın ve QR kodu okutun</p>
+        </div>
+        
+        <!-- Animasyonlu İşaret -->
+        <div class="mt-4 flex items-center gap-2 animate-pulse" id="yemekKartiStatus">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">Ödeme bekleniyor...</span>
+        </div>
+        
+        <!-- Timer -->
+        <div class="mt-3 flex items-center gap-2 text-gray-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="yemekKartiTimer" class="text-sm font-mono">02:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hata Bildirimi Overlay -->
+    <div id="errorOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center backdrop-blur-sm">
+      <div class="bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-red-500">
+        <!-- Hata İkonu -->
+        <div class="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mb-4 shadow-lg animate-pulse">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+        </div>
+        
+        <h3 class="text-2xl font-bold mb-2 text-red-700">Ödeme Hatası</h3>
+        <p class="text-sm text-gray-500 mb-6">İşlem Tamamlanamadı</p>
+        
+        <!-- Hata Mesajı -->
+        <div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 mb-6 w-full">
+          <p id="errorMessage" class="text-base text-gray-700 text-center leading-relaxed"></p>
+        </div>
+        
+        <div class="text-center space-y-2">
+          <p class="text-base font-semibold text-gray-700">Lütfen Kasiyere Bilgi Veriniz</p>
+          <p class="text-sm text-gray-500">Yardım için personelimize başvurun</p>
+        </div>
+        
+        <!-- Bilgi İkonu -->
+        <div class="mt-4 flex items-center gap-2 text-red-600">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">Bu mesaj 10 saniye sonra kapanacak</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NFC Kart Okuma Overlay -->
+    <div id="nfcOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center backdrop-blur-sm">
+      <div class="bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4" id="nfcBorder">
+        <!-- NFC İkonu -->
+        <div class="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-lg relative" id="nfcIcon">
+          <svg class="w-16 h-16 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+          </svg>
+          <!-- Dalgalar -->
+          <div class="absolute inset-0 rounded-full border-4 border-white opacity-30 animate-ping"></div>
+        </div>
+        
+        <h3 id="nfcBaslik" class="text-2xl font-bold mb-2">Kartınızı Okutunuz</h3>
+        <p class="text-sm text-gray-500 mb-6">Temassız Ödeme</p>
+        
+        <!-- Kart İkonu -->
+        <div class="bg-gradient-to-br p-8 rounded-2xl mb-6 shadow-inner relative overflow-hidden" id="nfcCardBg">
+          <div class="relative z-10">
+            <svg class="w-32 h-32 text-white opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+            </svg>
+          </div>
+          <!-- Animasyonlu arka plan -->
+          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse"></div>
+        </div>
+        
+        <div class="text-center space-y-2">
+          <p class="text-base font-semibold text-gray-700">Kartınızı Okuyucuya Yaklaştırın</p>
+          <p id="nfcAciklama" class="text-sm text-gray-500">Temassız ödeme için kartınızı cihaza yaklaştırın</p>
+        </div>
+        
+        <!-- Animasyonlu İşaret -->
+        <div class="mt-4 flex items-center gap-2 animate-pulse" id="nfcStatus">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">Kart bekleniyor...</span>
+        </div>
+        
+        <!-- Timer -->
+        <div class="mt-3 flex items-center gap-2 text-gray-500">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span id="nfcTimer" class="text-sm font-mono">00:30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cüzdan Seçimi Bilgi Overlay -->
+    <div id="walletInfoOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center backdrop-blur-sm">
+      <div class="bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-blue-500">
+        <!-- Bilgi İkonu -->
+        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        
+        <h3 class="text-2xl font-bold mb-2 text-blue-700">Cüzdan Seçimi</h3>
+        <p class="text-sm text-gray-500 mb-6">Lütfen Bekleyiniz</p>
+        
+        <!-- Mesaj -->
+        <div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 mb-6 w-full">
+          <p id="walletInfoMessage" class="text-base text-gray-700 text-center leading-relaxed font-semibold"></p>
+        </div>
+        
+        <div class="text-center space-y-2">
+          <p class="text-base font-semibold text-gray-700">Kasiyere Cüzdan Seçiminizi Söyleyiniz</p>
+          <p class="text-sm text-gray-500">İşlem devam ediyor...</p>
+        </div>
+        
+        <!-- Animasyonlu İşaret -->
+        <div class="mt-4 flex items-center gap-2 text-blue-600 animate-pulse">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="text-sm font-medium">Cüzdan seçimi bekleniyor...</span>
+        </div>
       </div>
     </div>
 
@@ -193,8 +493,11 @@
         console.log('🖼️ Render çağrıldı, payload:', payload);
         console.log('🖼️ arkaPlanResmi:', payload.arkaPlanResmi);
         console.log('🖼️ orderItems uzunluk:', payload.orderItems?.length || 0);
+        console.log('💰 Para üstü bilgileri:', payload.paraUstuBilgileri);
         
         adoptCss(payload);
+        
+        // SOL TARAF - Sipariş bilgileri
         document.getElementById('orderNo').textContent = payload.orderNo ? ('Sipariş No: '+payload.orderNo) : '';
         document.getElementById('total').textContent = typeof payload.totalAmount==='number' ? (payload.totalAmount.toFixed(2)+' ₺') : '';
         const logo=document.getElementById('logo'); if(payload.logoUrl){ logo.src=payload.logoUrl; logo.classList.remove('hidden'); }
@@ -211,39 +514,334 @@
           console.log('🎯 Başlık güncellendi: 🍽️ Sipariş Bekleniyor');
         }
         
-        // Arka plan resmi kontrolü - Artık sağ tarafta göster
+        // Sol taraf - sipariş listesi
         const arkaPlanContainer = document.getElementById('arkaPlanContainer');
         const itemsContainer = document.getElementById('items');
-        
-        // Sol taraf - sipariş listesi her zaman görünür
         arkaPlanContainer.classList.add('hidden');
         itemsContainer.classList.remove('hidden');
+        renderItems(itemsContainer, payload.orderItems||[]);
         
-        // Sağ taraf - Reklam alanı kontrolü
+        // SAĞ TARAF - Para Üstü veya Reklam Kontrolü
+        const paraUstuAlani = document.getElementById('paraUstuAlani');
+        const reklamContainer = document.getElementById('reklamContainer');
         const varsayilanReklam = document.getElementById('varsayilanReklam');
         const ozelReklam = document.getElementById('ozelReklam');
         const reklamResmi = document.getElementById('reklamResmi');
         
-        if (payload.arkaPlanResmi) {
-          // Arka plan resmi varsa sağ tarafta göster
-          console.log('🖼️ Arka plan resmi sağ tarafta gösteriliyor:', payload.arkaPlanResmi);
-          reklamResmi.src = payload.arkaPlanResmi;
-          varsayilanReklam.classList.add('hidden');
-          ozelReklam.classList.remove('hidden');
-        } else {
-          // Arka plan resmi yoksa varsayılan reklamı göster
-          console.log('🖼️ Varsayılan reklam gösteriliyor');
-          varsayilanReklam.classList.remove('hidden');
-          ozelReklam.classList.add('hidden');
+        if (payload.paraUstuBilgileri) {
+          // Para üstü bilgileri varsa içeriği güncelle
+          const { odenecekTutar, alinanTutar, paraUstu, kalanTutar } = payload.paraUstuBilgileri;
+          
+          document.getElementById('odenecekTutar').textContent = (odenecekTutar || 0).toFixed(2) + ' ₺';
+          document.getElementById('alinanTutar').textContent = (alinanTutar || 0).toFixed(2) + ' ₺';
+          
+          // Dinamik olarak "Kalan Tutar" veya "Para Üstü" göster
+          const kalanParaUstuLabel = document.getElementById('kalanParaUstuLabel');
+          const kalanParaUstuDeger = document.getElementById('kalanParaUstuDeger');
+          
+          if (paraUstu > 0) {
+            kalanParaUstuLabel.textContent = 'Para Üstü';
+            kalanParaUstuDeger.textContent = paraUstu.toFixed(2) + ' ₺';
+            kalanParaUstuDeger.className = 'text-3xl font-bold text-green-400';
+          } else if (kalanTutar > 0) {
+            kalanParaUstuLabel.textContent = 'Kalan Tutar';
+            kalanParaUstuDeger.textContent = kalanTutar.toFixed(2) + ' ₺';
+            kalanParaUstuDeger.className = 'text-3xl font-bold text-yellow-400';
+          } else {
+            kalanParaUstuLabel.textContent = 'Para Üstü';
+            kalanParaUstuDeger.textContent = '0.00 ₺';
+            kalanParaUstuDeger.className = 'text-3xl font-bold text-white';
+          }
+          
+          // Sadece içerik güncellendi, görünürlük event handler'larda kontrol ediliyor
+          console.log('✅ Para üstü içeriği güncellendi - Para Üstü:', paraUstu, 'Kalan:', kalanTutar);
         }
         
-        renderItems(itemsContainer, payload.orderItems||[]);
-        const ov=document.getElementById('gpOverlay'); const gpCode=document.getElementById('gpCode'); const gpQr=document.getElementById('gpQr');
+        // Reklam içeriği kontrolü (sadece para üstü yoksa)
+        if (!payload.paraUstuBilgileri) {
+          if (payload.arkaPlanResmi) {
+            // Arka plan resmi varsa sağ tarafta göster
+            console.log('🖼️ Arka plan resmi sağ tarafta gösteriliyor:', payload.arkaPlanResmi);
+            reklamResmi.src = payload.arkaPlanResmi;
+            varsayilanReklam.classList.add('hidden');
+            ozelReklam.classList.remove('hidden');
+          } else {
+            // Arka plan resmi yoksa varsayılan reklamı göster
+            console.log('🖼️ Varsayılan reklam gösteriliyor');
+            varsayilanReklam.classList.remove('hidden');
+            ozelReklam.classList.add('hidden');
+          }
+          
+          console.log('📺 Reklam alanı gösteriliyor');
+        }
+
+        
+        // GastroPay overlay kontrolü
+        const ov=document.getElementById('gpOverlay'); 
+        const gpCode=document.getElementById('gpCode'); 
+        const gpQr=document.getElementById('gpQr');
         if(payload.gastroPayCodeToken || payload.gastroPayQrToken){
           ov.classList.remove('hidden'); ov.classList.add('flex');
           if(payload.gastroPayCodeToken){ gpCode.classList.remove('hidden'); document.getElementById('gpCodeText').textContent=payload.gastroPayCodeToken; }
-          if(payload.gastroPayQrToken){ gpQr.classList.remove('hidden'); document.getElementById('gpQrImg').src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+payload.gastroPayQrToken; }
-        }else{ ov.classList.add('hidden'); ov.classList.remove('flex'); gpCode.classList.add('hidden'); gpQr.classList.add('hidden'); }
+          if(payload.gastroPayQrToken){ gpQr.classList.remove('hidden'); document.getElementById('gpQrImg').src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+payload.gastroPayQrToken; }
+          startTimer('gpTimer', 120);
+        }else{ 
+          ov.classList.add('hidden'); ov.classList.remove('flex'); 
+          gpCode.classList.add('hidden'); gpQr.classList.add('hidden');
+          stopTimer('gpTimer');
+        }
+        
+        // Edenred overlay kontrolü (Kod gösterilmeyecek, sadece QR)
+        const edenredOv = document.getElementById('edenredOverlay');
+        if(payload.inventivQrToken && payload.paymentType === 'edenred'){
+          console.log('🟢 Edenred QR gösteriliyor (kod yok)');
+          edenredOv.classList.remove('hidden'); 
+          edenredOv.classList.add('flex');
+          document.getElementById('edenredQrImg').src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+payload.inventivQrToken;
+          startTimer('edenredTimer', 120);
+        } else {
+          edenredOv.classList.add('hidden'); 
+          edenredOv.classList.remove('flex');
+          stopTimer('edenredTimer');
+        }
+        
+        // Yemek Kartı overlay kontrolü (Multinet, Setcard, Metropol)
+        const yemekKartiOv = document.getElementById('yemekKartiOverlay');
+        const yemekKartiBaslik = document.getElementById('yemekKartiBaslik');
+        const yemekKartiAciklama = document.getElementById('yemekKartiAciklama');
+        const yemekKartiKod = document.getElementById('yemekKartiKod');
+        const yemekKartiKodText = document.getElementById('yemekKartiKodText');
+        const yemekKartiBorder = document.getElementById('yemekKartiBorder');
+        const yemekKartiIcon = document.getElementById('yemekKartiIcon');
+        const yemekKartiQrBg = document.getElementById('yemekKartiQrBg');
+        const yemekKartiStatus = document.getElementById('yemekKartiStatus');
+        
+        if(payload.inventivQrToken && (payload.paymentType === 'multinet' || payload.paymentType === 'setcard' || payload.paymentType === 'metropol')){
+          console.log('🟢 Yemek Kartı QR gösteriliyor:', payload.paymentType);
+          yemekKartiOv.classList.remove('hidden'); 
+          yemekKartiOv.classList.add('flex');
+          document.getElementById('yemekKartiQrImg').src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+payload.inventivQrToken;
+          
+          // Kart tipine göre başlık, renk ve açıklama
+          if(payload.paymentType === 'multinet'){
+            yemekKartiBaslik.textContent = 'Multinet Up';
+            yemekKartiBaslik.className = 'text-2xl font-bold mb-2 text-orange-700';
+            yemekKartiBorder.className = 'bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-orange-500';
+            yemekKartiIcon.className = 'w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mb-4 shadow-lg';
+            yemekKartiQrBg.className = 'bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-2xl mb-6 shadow-inner';
+            yemekKartiStatus.className = 'mt-4 flex items-center gap-2 text-orange-600 animate-pulse';
+            yemekKartiAciklama.textContent = 'Multinet Up uygulamanızı açın ve QR kodu okutun';
+            yemekKartiKod.classList.add('hidden');
+          } else if(payload.paymentType === 'setcard'){
+            yemekKartiBaslik.textContent = 'Setcard';
+            yemekKartiBaslik.className = 'text-2xl font-bold mb-2 text-red-700';
+            yemekKartiBorder.className = 'bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-red-500';
+            yemekKartiIcon.className = 'w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mb-4 shadow-lg';
+            yemekKartiQrBg.className = 'bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl mb-6 shadow-inner';
+            yemekKartiStatus.className = 'mt-4 flex items-center gap-2 text-red-600 animate-pulse';
+            yemekKartiAciklama.textContent = 'Setcard uygulamanızı açın ve QR kodu okutun';
+            yemekKartiKod.classList.add('hidden');
+          } else if(payload.paymentType === 'metropol'){
+            yemekKartiBaslik.textContent = 'Metropol Card';
+            yemekKartiBaslik.className = 'text-2xl font-bold mb-2 text-purple-700';
+            yemekKartiBorder.className = 'bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-purple-500';
+            yemekKartiIcon.className = 'w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-lg';
+            yemekKartiQrBg.className = 'bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl mb-6 shadow-inner';
+            yemekKartiStatus.className = 'mt-4 flex items-center gap-2 text-purple-600 animate-pulse';
+            yemekKartiAciklama.textContent = 'Metropol Card uygulamanızı açın ve QR kodu okutun';
+            // Metropol için kısa kod varsa göster
+            if(payload.metropolShortCode){
+              yemekKartiKod.classList.remove('hidden');
+              yemekKartiKodText.textContent = payload.metropolShortCode;
+            } else {
+              yemekKartiKod.classList.add('hidden');
+            }
+          }
+          startTimer('yemekKartiTimer', 120);
+        } else {
+          yemekKartiOv.classList.add('hidden'); 
+          yemekKartiOv.classList.remove('flex');
+          stopTimer('yemekKartiTimer');
+        }
+        
+        // NFC Kart Okuma overlay kontrolü
+        const nfcOv = document.getElementById('nfcOverlay');
+        const nfcBaslik = document.getElementById('nfcBaslik');
+        const nfcAciklama = document.getElementById('nfcAciklama');
+        const nfcBorder = document.getElementById('nfcBorder');
+        const nfcIcon = document.getElementById('nfcIcon');
+        const nfcCardBg = document.getElementById('nfcCardBg');
+        const nfcStatus = document.getElementById('nfcStatus');
+        
+        // NFC kart bekleme veya işleniyor durumu
+        const isNfcWaiting = payload.nfcWaiting && (payload.paymentType === 'multinet_nfc' || payload.paymentType === 'setcard_nfc' || payload.paymentType === 'metropol_nfc');
+        const isNfcProcessing = payload.loadingMessage && (payload.loadingMessage.includes('işleniyor') || payload.loadingMessage.includes('onaylanıyor')) && (payload.paymentType === 'multinet_nfc' || payload.paymentType === 'setcard_nfc' || payload.paymentType === 'metropol_nfc');
+        
+        if(isNfcWaiting || isNfcProcessing){
+          console.log('🟢 NFC gösteriliyor:', payload.paymentType, isNfcWaiting ? 'Kart bekleniyor' : 'İşleniyor');
+          nfcOv.classList.remove('hidden'); 
+          nfcOv.classList.add('flex');
+          
+          // Kart tipine göre başlık, renk ve açıklama
+          if(payload.paymentType === 'multinet_nfc'){
+            nfcBaslik.textContent = isNfcProcessing ? 'Multinet Ödeme İşleniyor' : 'Multinet Kartınızı Okutunuz';
+            nfcBorder.className = 'bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-orange-500';
+            nfcIcon.className = 'w-24 h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mb-6 shadow-lg relative';
+            nfcCardBg.className = 'bg-gradient-to-br from-orange-50 to-orange-100 p-8 rounded-2xl mb-6 shadow-inner relative overflow-hidden';
+            nfcStatus.className = 'mt-4 flex items-center gap-2 text-orange-600 animate-pulse';
+            nfcAciklama.textContent = isNfcProcessing ? 'Lütfen bekleyiniz...' : 'Multinet kartınızı okuyucuya yaklaştırın';
+          } else if(payload.paymentType === 'setcard_nfc'){
+            nfcBaslik.textContent = isNfcProcessing ? 'Setcard Ödeme İşleniyor' : 'Setcard Kartınızı Okutunuz';
+            nfcBorder.className = 'bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-red-500';
+            nfcIcon.className = 'w-24 h-24 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mb-6 shadow-lg relative';
+            nfcCardBg.className = 'bg-gradient-to-br from-red-50 to-red-100 p-8 rounded-2xl mb-6 shadow-inner relative overflow-hidden';
+            nfcStatus.className = 'mt-4 flex items-center gap-2 text-red-600 animate-pulse';
+            nfcAciklama.textContent = isNfcProcessing ? 'Lütfen bekleyiniz...' : 'Setcard kartınızı okuyucuya yaklaştırın';
+          } else if(payload.paymentType === 'metropol_nfc'){
+            nfcBaslik.textContent = isNfcProcessing ? 'Metropol Ödeme İşleniyor' : 'Metropol Kartınızı Okutunuz';
+            nfcBorder.className = 'bg-gradient-to-br from-white to-gray-50 text-gray-900 rounded-2xl shadow-2xl p-10 flex flex-col items-center relative min-w-[400px] max-w-[500px] border-4 border-purple-500';
+            nfcIcon.className = 'w-24 h-24 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-lg relative';
+            nfcCardBg.className = 'bg-gradient-to-br from-purple-50 to-purple-100 p-8 rounded-2xl mb-6 shadow-inner relative overflow-hidden';
+            nfcStatus.className = 'mt-4 flex items-center gap-2 text-purple-600 animate-pulse';
+            nfcAciklama.textContent = isNfcProcessing ? 'Lütfen bekleyiniz...' : 'Metropol Card kartınızı okuyucuya yaklaştırın';
+          }
+          
+          // Timer sadece kart bekleme durumunda
+          if(isNfcWaiting) {
+            startTimer('nfcTimer', 30);
+          } else {
+            stopTimer('nfcTimer');
+          }
+        } else {
+          nfcOv.classList.add('hidden'); 
+          nfcOv.classList.remove('flex');
+          stopTimer('nfcTimer');
+        }
+        
+        // Cüzdan Seçimi Bilgi overlay kontrolü
+        const walletInfoOv = document.getElementById('walletInfoOverlay');
+        const walletInfoMessage = document.getElementById('walletInfoMessage');
+        
+        if(payload.loadingMessage && payload.loadingMessage.includes('cüzdan bulundu')){
+          console.log('🟢 Cüzdan seçimi bilgisi gösteriliyor');
+          walletInfoOv.classList.remove('hidden'); 
+          walletInfoOv.classList.add('flex');
+          walletInfoMessage.textContent = payload.loadingMessage;
+        } else {
+          walletInfoOv.classList.add('hidden'); 
+          walletInfoOv.classList.remove('flex');
+        }
+      }
+      
+      // Hata gösterme fonksiyonu
+      function showError(message) {
+        const errorOv = document.getElementById('errorOverlay');
+        const errorMsg = document.getElementById('errorMessage');
+        errorMsg.textContent = message || 'Bir hata oluştu. Lütfen kasiyere bilgi veriniz.';
+        errorOv.classList.remove('hidden');
+        errorOv.classList.add('flex');
+        
+        // 10 saniye sonra otomatik kapat
+        setTimeout(() => {
+          errorOv.classList.add('hidden');
+          errorOv.classList.remove('flex');
+        }, 10000);
+      }
+      
+      // Timer değişkenleri
+      let gpTimerInterval = null;
+      let edenredTimerInterval = null;
+      let yemekKartiTimerInterval = null;
+      let nfcTimerInterval = null;
+      
+      // Timer başlatma fonksiyonu
+      function startTimer(timerId, duration = 120) {
+        const timerElement = document.getElementById(timerId);
+        if (!timerElement) return;
+        
+        let remaining = duration;
+        
+        // Önceki timer'ı temizle
+        if (timerId === 'gpTimer' && gpTimerInterval) {
+          clearInterval(gpTimerInterval);
+        } else if (timerId === 'edenredTimer' && edenredTimerInterval) {
+          clearInterval(edenredTimerInterval);
+        } else if (timerId === 'yemekKartiTimer' && yemekKartiTimerInterval) {
+          clearInterval(yemekKartiTimerInterval);
+        } else if (timerId === 'nfcTimer' && nfcTimerInterval) {
+          clearInterval(nfcTimerInterval);
+        }
+        
+        // Timer'ı güncelle
+        const updateTimer = () => {
+          const minutes = Math.floor(remaining / 60);
+          const seconds = remaining % 60;
+          timerElement.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          
+          // Süre bittiyse kırmızı yap
+          if (remaining <= 10) {
+            timerElement.classList.add('text-red-600', 'font-bold');
+          }
+          
+          if (remaining <= 0) {
+            if (timerId === 'gpTimer') {
+              clearInterval(gpTimerInterval);
+              document.getElementById('gpOverlay').classList.add('hidden');
+              document.getElementById('gpOverlay').classList.remove('flex');
+            } else if (timerId === 'edenredTimer') {
+              clearInterval(edenredTimerInterval);
+              document.getElementById('edenredOverlay').classList.add('hidden');
+              document.getElementById('edenredOverlay').classList.remove('flex');
+            } else if (timerId === 'yemekKartiTimer') {
+              clearInterval(yemekKartiTimerInterval);
+              document.getElementById('yemekKartiOverlay').classList.add('hidden');
+              document.getElementById('yemekKartiOverlay').classList.remove('flex');
+            } else if (timerId === 'nfcTimer') {
+              clearInterval(nfcTimerInterval);
+              document.getElementById('nfcOverlay').classList.add('hidden');
+              document.getElementById('nfcOverlay').classList.remove('flex');
+            }
+          }
+          
+          remaining--;
+        };
+        
+        // İlk güncelleme
+        updateTimer();
+        
+        // Her saniye güncelle
+        const interval = setInterval(updateTimer, 1000);
+        
+        // Interval'i sakla
+        if (timerId === 'gpTimer') gpTimerInterval = interval;
+        else if (timerId === 'edenredTimer') edenredTimerInterval = interval;
+        else if (timerId === 'yemekKartiTimer') yemekKartiTimerInterval = interval;
+        else if (timerId === 'nfcTimer') nfcTimerInterval = interval;
+      }
+      
+      // Timer durdurma fonksiyonu
+      function stopTimer(timerId) {
+        if (timerId === 'gpTimer' && gpTimerInterval) {
+          clearInterval(gpTimerInterval);
+          gpTimerInterval = null;
+        } else if (timerId === 'edenredTimer' && edenredTimerInterval) {
+          clearInterval(edenredTimerInterval);
+          edenredTimerInterval = null;
+        } else if (timerId === 'yemekKartiTimer' && yemekKartiTimerInterval) {
+          clearInterval(yemekKartiTimerInterval);
+          yemekKartiTimerInterval = null;
+        } else if (timerId === 'nfcTimer' && nfcTimerInterval) {
+          clearInterval(nfcTimerInterval);
+          nfcTimerInterval = null;
+        }
+        
+        // Timer'ı sıfırla
+        const timerElement = document.getElementById(timerId);
+        if (timerElement) {
+          const defaultTime = timerId === 'nfcTimer' ? '00:30' : '02:00';
+          timerElement.textContent = defaultTime;
+          timerElement.classList.remove('text-red-600', 'font-bold');
+        }
       }
       
       // Update bildirimi fonksiyonları
@@ -326,8 +924,96 @@
         showUpdateLoader(false);
       });
       
-      ipcRenderer.on('data:update', (_e,d)=>render(d||{}));
-      ipcRenderer.on('data:clear', (_e,d)=>render(d||{isCompleted:true,orderItems:[],totalAmount:0}));
+      // Son render edilen payload'u sakla
+      let lastPayload = {};
+      let paraUstuGosterilmeZamani = 0; // Para üstü ne zaman gösterildi
+      
+      ipcRenderer.on('data:update', (_e,d)=>{
+        console.log('📥 Update event alındı:', d);
+        
+        // Yeni payload oluştur
+        const newPayload = {
+          ...lastPayload, 
+          ...d
+        };
+        
+        // ÖNEMLİ: Eğer gelen data'da paraUstuBilgileri undefined ise, 
+        // mevcut para üstü bilgisini KORU (silme)
+        // Sadece açıkça null gelirse temizle
+        if (!d.hasOwnProperty('paraUstuBilgileri')) {
+          // paraUstuBilgileri gelmemiş, mevcut değeri koru
+          newPayload.paraUstuBilgileri = lastPayload.paraUstuBilgileri;
+          console.log('ℹ️ Update içinde para üstü bilgisi yok, mevcut değer korunuyor:', lastPayload.paraUstuBilgileri);
+        } else if (d.paraUstuBilgileri === null && lastPayload.paraUstuBilgileri) {
+          // Açıkça null gelmiş, gizle
+          console.log('⚠️ Update içinde para üstü null, gizleniyor');
+          const paraUstuAlani = document.getElementById('paraUstuAlani');
+          const reklamContainer = document.getElementById('reklamContainer');
+          if (paraUstuAlani) {
+            paraUstuAlani.classList.add('force-hidden', 'hidden');
+            paraUstuAlani.style.display = 'none';
+            paraUstuAlani.style.visibility = 'hidden';
+            paraUstuAlani.style.opacity = '0';
+          }
+          if (reklamContainer) {
+            reklamContainer.classList.remove('hidden');
+          }
+          newPayload.paraUstuBilgileri = null;
+        }
+        
+        lastPayload = newPayload;
+        render(lastPayload);
+      });
+      ipcRenderer.on('data:clear', (_e,d)=>{
+        console.log('🧹 Clear çağrıldı');
+        
+        // Payload'u güncelle
+        lastPayload = {isCompleted:true, orderItems:[], totalAmount:0, paraUstuBilgileri: null};
+        
+        // Para üstü alanını ANINDA gizle - render'dan ÖNCE
+        const paraUstuAlani = document.getElementById('paraUstuAlani');
+        const reklamContainer = document.getElementById('reklamContainer');
+        if (paraUstuAlani) {
+          paraUstuAlani.classList.add('force-hidden', 'hidden');
+          paraUstuAlani.style.display = 'none !important';
+          paraUstuAlani.style.visibility = 'hidden !important';
+          paraUstuAlani.style.opacity = '0 !important';
+        }
+        if (reklamContainer) {
+          reklamContainer.classList.remove('hidden');
+        }
+        
+        // requestAnimationFrame kullanarak render'ı ertele
+        requestAnimationFrame(() => {
+          render(lastPayload);
+        });
+      });
+      ipcRenderer.on('data:error', (_e,d)=>showError(d?.message || 'Bir hata oluştu'));
+      ipcRenderer.on('data:para-ustu', (_e,d)=>{
+        console.log('💰 Para üstü verisi alındı:', d);
+        // Mevcut sipariş bilgilerini koru, sadece para üstü ekle
+        lastPayload = {...lastPayload, paraUstuBilgileri: d};
+        
+        // Para üstü alanını göster - HEMEN
+        const paraUstuAlani = document.getElementById('paraUstuAlani');
+        const reklamContainer = document.getElementById('reklamContainer');
+        if (paraUstuAlani) {
+          paraUstuAlani.classList.remove('force-hidden', 'hidden');
+          paraUstuAlani.style.display = 'flex';
+          paraUstuAlani.style.visibility = 'visible';
+          paraUstuAlani.style.opacity = '1';
+        }
+        if (reklamContainer) {
+          reklamContainer.classList.add('hidden');
+        }
+        
+        render(lastPayload);
+      });
+      ipcRenderer.on('data:hide-para-ustu', ()=>{
+        console.log('🙈 Para üstü gizleme eventi alındı - ANCAK künye doluyken göstermeye devam ediyoruz');
+        // Künye doluyken para üstü alanını göstermeye devam et
+        // Sadece clear event'inde gizle
+      });
       document.getElementById('gpClose').addEventListener('click',()=>{ const ov=document.getElementById('gpOverlay'); ov.classList.add('hidden'); ov.classList.remove('flex'); });
       
       // Logo'ya 5 kere tıklama ile uygulamayı kapat
