@@ -101,6 +101,7 @@ function createWindow() {
 
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  
   win.on('closed', () => { win = null; });
 }
 
@@ -127,6 +128,23 @@ function createHttpServer() {
 
   api.post('/clear', (_req, res) => {
     if (win && win.webContents) win.webContents.send('data:clear', { isCompleted: true });
+    res.json({ ok: true });
+  });
+
+  api.post('/error', (req, res) => {
+    const payload = req.body || {};
+    if (win && win.webContents) win.webContents.send('data:error', payload);
+    res.json({ ok: true });
+  });
+
+  api.post('/para-ustu', (req, res) => {
+    const payload = req.body || {};
+    if (win && win.webContents) win.webContents.send('data:para-ustu', payload);
+    res.json({ ok: true });
+  });
+
+  api.post('/hide-para-ustu', (req, res) => {
+    if (win && win.webContents) win.webContents.send('data:hide-para-ustu');
     res.json({ ok: true });
   });
 
