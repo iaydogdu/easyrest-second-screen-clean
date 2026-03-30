@@ -487,11 +487,6 @@
         if (payload.bodyClasses) document.body.className=payload.bodyClasses+' bg-purple-900 text-white';
       }
       function render(payload){
-        console.log('🖼️ Render çağrıldı, payload:', payload);
-        console.log('🖼️ arkaPlanResmi:', payload.arkaPlanResmi);
-        console.log('🖼️ orderItems uzunluk:', payload.orderItems?.length || 0);
-        console.log('💰 Para üstü bilgileri:', payload.paraUstuBilgileri);
-        
         adoptCss(payload);
         
         // SOL TARAF - Sipariş bilgileri
@@ -505,10 +500,8 @@
         
         if (hasOrders) {
           baslikText.textContent = 'Siparişiniz';
-          console.log('🎯 Başlık güncellendi: Siparişiniz');
         } else {
-          baslikText.textContent = '🍽️ Sipariş Bekleniyor';
-          console.log('🎯 Başlık güncellendi: 🍽️ Sipariş Bekleniyor');
+          baslikText.textContent = '�️ Sipariş Bekleniyor';
         }
         
         // Sol taraf - sipariş listesi
@@ -525,8 +518,13 @@
         const ozelReklam = document.getElementById('ozelReklam');
         const reklamResmi = document.getElementById('reklamResmi');
         
-        if (payload.paraUstuBilgileri) {
-          // Para üstü bilgileri varsa içeriği güncelle
+        // ÖNEMLİ: Eğer force-hidden varsa, para üstü alanına DOKUNMA
+        const paraUstuKapali = paraUstuAlani.classList.contains('force-hidden');
+        
+        console.log('🔍 RENDER - paraUstuBilgileri:', !!payload.paraUstuBilgileri, 'force-hidden:', paraUstuKapali, 'display:', paraUstuAlani.style.display);
+        
+        if (payload.paraUstuBilgileri && !paraUstuKapali) {
+          // Para üstü bilgileri varsa VE kapalı değilse içeriği güncelle
           const { odenecekTutar, alinanTutar, paraUstu, kalanTutar } = payload.paraUstuBilgileri;
           
           document.getElementById('odenecekTutar').textContent = (odenecekTutar || 0).toFixed(2) + ' ₺';
@@ -550,26 +548,21 @@
             kalanParaUstuDeger.className = 'text-3xl font-bold text-white';
           }
           
-          // Sadece içerik güncellendi, görünürlük event handler'larda kontrol ediliyor
-          console.log('✅ Para üstü içeriği güncellendi - Para Üstü:', paraUstu, 'Kalan:', kalanTutar);
+          console.log('✅ RENDER - Para üstü içeriği güncellendi');
         }
         
-        // Reklam içeriği kontrolü (sadece para üstü yoksa)
-        if (!payload.paraUstuBilgileri) {
+        // Reklam içeriği kontrolü (sadece para üstü yoksa VEYA kapalıysa)
+        if (!payload.paraUstuBilgileri || paraUstuKapali) {
           if (payload.arkaPlanResmi) {
             // Arka plan resmi varsa sağ tarafta göster
-            console.log('🖼️ Arka plan resmi sağ tarafta gösteriliyor:', payload.arkaPlanResmi);
             reklamResmi.src = payload.arkaPlanResmi;
             varsayilanReklam.classList.add('hidden');
             ozelReklam.classList.remove('hidden');
           } else {
             // Arka plan resmi yoksa varsayılan reklamı göster
-            console.log('🖼️ Varsayılan reklam gösteriliyor');
             varsayilanReklam.classList.remove('hidden');
             ozelReklam.classList.add('hidden');
           }
-          
-          console.log('📺 Reklam alanı gösteriliyor');
         }
 
         
@@ -924,10 +917,10 @@
       // Son render edilen payload'u sakla
       let lastPayload = {};
       let paraUstuGosterilmeZamani = 0; // Para üstü ne zaman gösterildi
+      let paraUstuKapatilmaZamani = 0; // Para üstü ne zaman kapatıldı
+      const KORUMA_SURESI = 500; // 500ms koruma süresi
       
       ipcRenderer.on('data:update', (_e,d)=>{
-        console.log('📥 Update event alındı:', d);
-        
         // Yeni payload oluştur
         const newPayload = {
           ...lastPayload, 
@@ -940,13 +933,12 @@
         if (!d.hasOwnProperty('paraUstuBilgileri')) {
           // paraUstuBilgileri gelmemiş, mevcut değeri koru
           newPayload.paraUstuBilgileri = lastPayload.paraUstuBilgileri;
-          console.log('ℹ️ Update içinde para üstü bilgisi yok, mevcut değer korunuyor:', lastPayload.paraUstuBilgileri);
         } else if (d.paraUstuBilgileri === null && lastPayload.paraUstuBilgileri) {
           // Açıkça null gelmiş, gizle
-          console.log('⚠️ Update içinde para üstü null, gizleniyor');
           const paraUstuAlani = document.getElementById('paraUstuAlani');
           const reklamContainer = document.getElementById('reklamContainer');
           if (paraUstuAlani) {
+            console.log('🚫 UPDATE - Para üstü null, gizleniyor');
             paraUstuAlani.classList.add('force-hidden', 'hidden');
             paraUstuAlani.style.display = 'none';
             paraUstuAlani.style.visibility = 'hidden';
@@ -962,7 +954,7 @@
         render(lastPayload);
       });
       ipcRenderer.on('data:clear', (_e,d)=>{
-        console.log('🧹 Clear çağrıldı');
+        console.log('🧹 CLEAR - Para üstü kapatılıyor');
         
         // Payload'u güncelle
         lastPayload = {isCompleted:true, orderItems:[], totalAmount:0, paraUstuBilgileri: null};
@@ -972,9 +964,11 @@
         const reklamContainer = document.getElementById('reklamContainer');
         if (paraUstuAlani) {
           paraUstuAlani.classList.add('force-hidden', 'hidden');
-          paraUstuAlani.style.display = 'none !important';
-          paraUstuAlani.style.visibility = 'hidden !important';
-          paraUstuAlani.style.opacity = '0 !important';
+          paraUstuAlani.classList.remove('flex');
+          paraUstuAlani.style.display = 'none';
+          paraUstuAlani.style.visibility = 'hidden';
+          paraUstuAlani.style.opacity = '0';
+          console.log('🚫 CLEAR - Para üstü alanı gizlendi, display:', paraUstuAlani.style.display);
         }
         if (reklamContainer) {
           reklamContainer.classList.remove('hidden');
@@ -987,18 +981,28 @@
       });
       ipcRenderer.on('data:error', (_e,d)=>showError(d?.message || 'Bir hata oluştu'));
       ipcRenderer.on('data:para-ustu', (_e,d)=>{
-        console.log('💰 Para üstü verisi alındı:', d);
+        // Koruma: Eğer az önce kapatıldıysa, açma
+        const simdikiZaman = Date.now();
+        if (simdikiZaman - paraUstuKapatilmaZamani < KORUMA_SURESI) {
+          console.log('⚠️ PARA-USTU - ENGELLENDI! Az önce kapatıldı, açılmayacak. Geçen süre:', simdikiZaman - paraUstuKapatilmaZamani, 'ms');
+          return;
+        }
+        
+        console.log('💰 PARA-USTU - Açılıyor, data:', d);
         // Mevcut sipariş bilgilerini koru, sadece para üstü ekle
         lastPayload = {...lastPayload, paraUstuBilgileri: d};
         
-        // Para üstü alanını göster - HEMEN
+        // Para üstü alanını göster - HEMEN ve force-hidden'ı kaldır
         const paraUstuAlani = document.getElementById('paraUstuAlani');
         const reklamContainer = document.getElementById('reklamContainer');
         if (paraUstuAlani) {
+          // Önce tüm gizleme class'larını kaldır
           paraUstuAlani.classList.remove('force-hidden', 'hidden');
+          paraUstuAlani.classList.add('flex');
           paraUstuAlani.style.display = 'flex';
           paraUstuAlani.style.visibility = 'visible';
           paraUstuAlani.style.opacity = '1';
+          console.log('✅ PARA-USTU - Alan açıldı, display:', paraUstuAlani.style.display, 'classes:', paraUstuAlani.className);
         }
         if (reklamContainer) {
           reklamContainer.classList.add('hidden');
@@ -1007,26 +1011,34 @@
         render(lastPayload);
       });
       ipcRenderer.on('data:hide-para-ustu', ()=>{
-        console.log('🙈 Para üstü gizleniyor');
+        console.log('🙈 HIDE-PARA-USTU - Kapatılıyor');
+        
+        // Kapatılma zamanını kaydet
+        paraUstuKapatilmaZamani = Date.now();
         
         // Para üstü bilgisini temizle
         lastPayload.paraUstuBilgileri = null;
         
-        // Para üstü alanını ANINDA gizle
+        // Para üstü alanını ANINDA gizle - render çağırmadan
         const paraUstuAlani = document.getElementById('paraUstuAlani');
         const reklamContainer = document.getElementById('reklamContainer');
+        
         if (paraUstuAlani) {
+          // Tüm gösterim özelliklerini kaldır
+          paraUstuAlani.classList.remove('flex');
           paraUstuAlani.classList.add('force-hidden', 'hidden');
           paraUstuAlani.style.display = 'none';
           paraUstuAlani.style.visibility = 'hidden';
           paraUstuAlani.style.opacity = '0';
+          console.log('🚫 HIDE-PARA-USTU - Alan kapatıldı, display:', paraUstuAlani.style.display, 'classes:', paraUstuAlani.className);
         }
+        
         if (reklamContainer) {
           reklamContainer.classList.remove('hidden');
         }
         
-        // Render'ı çağır
-        render(lastPayload);
+        // Render'ı ÇAĞIRMA - sadece DOM'u manipüle et
+        // Çünkü render() başka event'lerle çakışabilir
       });
       document.getElementById('gpClose').addEventListener('click',()=>{ const ov=document.getElementById('gpOverlay'); ov.classList.add('hidden'); ov.classList.remove('flex'); });
       
