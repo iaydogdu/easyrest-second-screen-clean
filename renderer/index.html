@@ -39,7 +39,17 @@
     <div class="h-full w-full flex">
       
       <!-- SOL TARAF - Sipariş Özeti (50% genişlik) -->
-      <div class="w-1/2 h-full flex flex-col p-4">
+      <div class="w-1/2 h-full flex flex-col p-4 relative">
+        <!-- Kasa Kapalı katmanı - sadece sol paneli kaplar, sağdaki reklam devam eder -->
+        <div id="kasaKapaliAlani" class="hidden absolute inset-0 z-40 bg-purple-900 flex-col items-center justify-center text-center p-8">
+          <div class="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-8 shadow-2xl">
+            <svg class="w-20 h-20 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h1 class="text-6xl font-extrabold tracking-wide text-white mb-6">KASA KAPALIDIR</h1>
+          <p id="kasaKapaliMesaj" class="text-2xl text-yellow-300 font-semibold"></p>
+        </div>
         <div class="text-center mb-4 p-2">
           <h2 id="baslikText" class="text-2xl font-bold tracking-wide">🍽️ Sipariş Bekleniyor</h2>
           <div id="orderNo" class="text-sm text-yellow-300 mt-1"></div>
@@ -501,7 +511,7 @@
         if (hasOrders) {
           baslikText.textContent = 'Siparişiniz';
         } else {
-          baslikText.textContent = '�️ Sipariş Bekleniyor';
+          baslikText.textContent = '🍽️ Sipariş Bekleniyor';
         }
         
         // Sol taraf - sipariş listesi
@@ -914,8 +924,36 @@
         showUpdateLoader(false);
       });
       
-      // Son render edilen payload'u sakla
-      let lastPayload = {};
+      // Marka bilgileri (sağdaki reklam/arka plan resmi + logo) yerelde saklanır.
+      // Böylece uygulama yeniden başlasa bile ilk siparişi beklemeden reklam görünür.
+      const BRANDING_KEY = 'secondScreen.branding';
+      function loadBranding() {
+        try { return JSON.parse(localStorage.getItem(BRANDING_KEY)) || {}; } catch (_) { return {}; }
+      }
+      function saveBranding(d) {
+        if (!d) return;
+        const branding = loadBranding();
+        let changed = false;
+        // Sadece payload'da açıkça gelen alanları güncelle (null = firma resmi kaldırdı)
+        ['arkaPlanResmi', 'logoUrl'].forEach(k => {
+          if (Object.prototype.hasOwnProperty.call(d, k) && branding[k] !== d[k]) {
+            branding[k] = d[k] || null;
+            changed = true;
+          }
+        });
+        if (changed) {
+          try { localStorage.setItem(BRANDING_KEY, JSON.stringify(branding)); } catch (_) {}
+        }
+      }
+
+      // Reklam resmi yüklenemezse (internet yok, link bozuk) varsayılan karta dön
+      document.getElementById('reklamResmi').addEventListener('error', () => {
+        document.getElementById('ozelReklam').classList.add('hidden');
+        document.getElementById('varsayilanReklam').classList.remove('hidden');
+      });
+
+      // Son render edilen payload'u sakla - açılışta kayıtlı marka bilgileriyle başla
+      let lastPayload = loadBranding();
       let paraUstuGosterilmeZamani = 0; // Para üstü ne zaman gösterildi
       let paraUstuKapatilmaZamani = 0; // Para üstü ne zaman kapatıldı
       const KORUMA_SURESI = 500; // 500ms koruma süresi
@@ -951,13 +989,19 @@
         }
         
         lastPayload = newPayload;
+        saveBranding(d);
         render(lastPayload);
       });
       ipcRenderer.on('data:clear', (_e,d)=>{
         console.log('🧹 CLEAR - Para üstü kapatılıyor');
         
-        // Payload'u güncelle
-        lastPayload = {isCompleted:true, orderItems:[], totalAmount:0, paraUstuBilgileri: null};
+        // Payload'u güncelle - sipariş bilgileri sıfırlanır ama marka bilgileri
+        // (sağdaki reklam/arka plan resmi ve logo) korunur ki boşta da görünsün
+        lastPayload = {
+          isCompleted:true, orderItems:[], totalAmount:0, paraUstuBilgileri: null,
+          arkaPlanResmi: lastPayload.arkaPlanResmi,
+          logoUrl: lastPayload.logoUrl
+        };
         
         // Para üstü alanını ANINDA gizle - render'dan ÖNCE
         const paraUstuAlani = document.getElementById('paraUstuAlani');
@@ -1059,6 +1103,27 @@
           }, 2000);
         }
       });
+
+      // Kasa açık/kapalı durumu - siparişten bağımsız, yeniden başlatmada korunur
+      const KASA_KEY = 'secondScreen.kasaDurumu';
+      function applyKasaDurumu(durum) {
+        const alan = document.getElementById('kasaKapaliAlani');
+        const kapali = !!(durum && durum.kapali);
+        alan.classList.toggle('hidden', !kapali);
+        alan.classList.toggle('flex', kapali);
+        document.getElementById('kasaKapaliMesaj').textContent = kapali ? (durum.mesaj || '') : '';
+      }
+      ipcRenderer.on('data:kasa-durumu', (_e, d) => {
+        const durum = { kapali: !!d?.kapali, mesaj: d?.mesaj || '' };
+        try { localStorage.setItem(KASA_KEY, JSON.stringify(durum)); } catch (_) {}
+        applyKasaDurumu(durum);
+      });
+      try { applyKasaDurumu(JSON.parse(localStorage.getItem(KASA_KEY))); } catch (_) {}
+
+      // Açılışta kayıtlı reklam/logo varsa hemen göster (sipariş beklemeden)
+      if (lastPayload.arkaPlanResmi || lastPayload.logoUrl) {
+        render(lastPayload);
+      }
     </script>
   </body>
 </html>

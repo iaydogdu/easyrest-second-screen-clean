@@ -1,6 +1,9 @@
-const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, net } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const { pathToFileURL } = require('url');
 const express = require('express');
 
 let win = null;
@@ -105,6 +108,83 @@ function createWindow() {
   win.on('closed', () => { win = null; });
 }
 
+// ── Arka plan resmi yerel önbelleği ──────────────────────────────────────
+// POS her /update'te aynı arkaPlanResmi URL'ini gönderir. Resim URL başına
+// bir kez indirilip userData/reklam-cache altına kaydedilir; URL aynı kaldıkça
+// diskteki dosya kullanılır, URL değişince yenisi indirilip eskisi silinir.
+const REKLAM_MAX_BYTES = 30 * 1024 * 1024;   // 30 MB üst sınır
+const REKLAM_RETRY_MS = 60 * 1000;           // başarısız indirmeyi en erken 1 dk sonra tekrar dene
+let reklamCacheDir = null;
+let reklamMeta = { url: null, file: null };  // diskteki geçerli kopya
+let reklamIndirilen = null;                  // şu an indirilen URL
+let reklamSonHata = { url: null, at: 0 };
+
+function reklamMetaPath() { return path.join(reklamCacheDir, 'meta.json'); }
+
+function initReklamCache() {
+  reklamCacheDir = path.join(app.getPath('userData'), 'reklam-cache');
+  try {
+    fs.mkdirSync(reklamCacheDir, { recursive: true });
+    const meta = JSON.parse(fs.readFileSync(reklamMetaPath(), 'utf8'));
+    if (meta?.url && meta?.file && fs.existsSync(path.join(reklamCacheDir, meta.file))) {
+      reklamMeta = meta;
+      console.log('[Reklam] Yerel kopya bulundu:', meta.file);
+    }
+  } catch (_) { /* ilk çalıştırma - meta yok */ }
+}
+
+function reklamLocalUrl() {
+  return pathToFileURL(path.join(reklamCacheDir, reklamMeta.file)).href;
+}
+
+// /update payload'undaki uzak URL'i yerel kopyayla değiştirir.
+// Yerel kopya yoksa uzak URL'i olduğu gibi bırakır ve arka planda indirmeyi başlatır.
+let reklamIstenen = null;                    // POS'un en son gönderdiği URL
+function resolveArkaPlanResmi(url) {
+  reklamIstenen = url;
+  if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return url;
+  if (reklamMeta.url === url) return reklamLocalUrl();
+  indirArkaPlanResmi(url);
+  return url;
+}
+
+async function indirArkaPlanResmi(url) {
+  if (reklamIndirilen === url) return;
+  if (reklamSonHata.url === url && Date.now() - reklamSonHata.at < REKLAM_RETRY_MS) return;
+  reklamIndirilen = url;
+  const tmp = path.join(reklamCacheDir, 'indiriliyor.tmp');
+  try {
+    console.log('[Reklam] Yeni resim indiriliyor:', url);
+    const res = await net.fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const type = res.headers.get('content-type') || '';
+    if (!type.startsWith('image/')) throw new Error('Resim değil: ' + type);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > REKLAM_MAX_BYTES) throw new Error('Dosya çok büyük: ' + buf.length);
+
+    const ext = (path.extname(new URL(url).pathname) || '.' + type.split('/')[1] || '.img')
+      .toLowerCase().replace(/[^.a-z0-9]/g, '').slice(0, 6);
+    const file = crypto.createHash('sha1').update(url).digest('hex') + ext;
+    fs.writeFileSync(tmp, buf);
+    fs.renameSync(tmp, path.join(reklamCacheDir, file));
+
+    const eski = reklamMeta.file;
+    reklamMeta = { url, file };
+    fs.writeFileSync(reklamMetaPath(), JSON.stringify(reklamMeta));
+    if (eski && eski !== file) fs.rm(path.join(reklamCacheDir, eski), { force: true }, () => {});
+    console.log(`[Reklam] Kaydedildi: ${file} (${Math.round(buf.length / 1024)} KB)`);
+
+    // Ekran hâlâ bu URL'i gösteriyorsa yerel kopyaya geçir
+    if (reklamIstenen === url && win && win.webContents) win.webContents.send('data:update', { arkaPlanResmi: reklamLocalUrl() });
+  } catch (err) {
+    console.log('[Reklam] İndirme hatası:', err.message);
+    reklamSonHata = { url, at: Date.now() };
+    fs.rm(tmp, { force: true }, () => {});
+  } finally {
+    if (reklamIndirilen === url) reklamIndirilen = null;
+  }
+}
+
 function createHttpServer() {
   const api = express();
   api.use(express.json({ limit: '1mb' }));
@@ -122,6 +202,9 @@ function createHttpServer() {
 
   api.post('/update', (req, res) => {
     const payload = req.body || {};
+    if (Object.prototype.hasOwnProperty.call(payload, 'arkaPlanResmi')) {
+      payload.arkaPlanResmi = resolveArkaPlanResmi(payload.arkaPlanResmi);
+    }
     if (win && win.webContents) win.webContents.send('data:update', payload);
     res.json({ ok: true });
   });
@@ -148,6 +231,20 @@ function createHttpServer() {
     res.json({ ok: true });
   });
 
+  // Kasa açık/kapalı durumu
+  // Body: { "kapali": true | false, "mesaj"?: "Lütfen diğer kasayı kullanınız" }
+  // kapali=true  -> sol panelde büyük "Kasa Kapalıdır" yazısı, sağdaki reklam devam eder
+  // kapali=false -> ekran normale döner
+  api.post('/kasa-durumu', (req, res) => {
+    const { kapali, mesaj } = req.body || {};
+    if (typeof kapali !== 'boolean') {
+      return res.status(400).json({ ok: false, error: '"kapali" alanı true/false olmalı' });
+    }
+    const payload = { kapali, mesaj: typeof mesaj === 'string' ? mesaj.slice(0, 200) : '' };
+    if (win && win.webContents) win.webContents.send('data:kasa-durumu', payload);
+    res.json({ ok: true, kapali });
+  });
+
   server = api.listen(HTTP_PORT, '127.0.0.1', () =>
     console.log(`[SecondScreen] Server çalışıyor: 127.0.0.1:${HTTP_PORT}`));
 }
@@ -158,8 +255,9 @@ ipcMain.on('app:quit', () => {
   app.quit();
 });
 
-app.whenReady().then(() => { 
-  createWindow(); 
+app.whenReady().then(() => {
+  initReklamCache();
+  createWindow();
   createHttpServer(); 
   
   console.log('[App] Uygulama başlatıldı - Server: 127.0.0.1:' + HTTP_PORT);
