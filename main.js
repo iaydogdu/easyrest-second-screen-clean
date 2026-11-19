@@ -54,7 +54,7 @@ if (!isDev) {
   autoUpdater.on('error', (err) => {
     console.log('[AutoUpdater] Guncelleme hatasi:', err.message);
     if (win && win.webContents) {
-      win.webContents.send('update-error', err);
+      win.webContents.send('update-error', { message: err?.message || String(err) });
     }
   });
 
@@ -63,22 +63,47 @@ if (!isDev) {
     console.log(`[AutoUpdater] Indiriliyor: ${percent}%`);
   });
 
-  autoUpdater.on('update-downloaded', () => {
-    console.log('[AutoUpdater] Guncelleme hazir! 5 saniye sonra yeniden baslatilacak...');
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Guncelleme hazir:', info?.version, '- ekran bosa dusunce kurulacak');
     if (win && win.webContents) {
-      win.webContents.send('update-downloaded');
+      win.webContents.send('update-downloaded', { version: info?.version });
     }
-    
-    // 5 saniye bekle ve otomatik yeniden başlat
-    setTimeout(() => {
-      console.log('[AutoUpdater] Yeniden baslatiliyor...');
-      autoUpdater.quitAndInstall();
-    }, 5000);
+    guncellemeyiBostaKur();
   });
   
   console.log('[AutoUpdater] electron-updater hazir - GitHub: iaydogdu/easyrest-second-screen-clean');
 } else {
   console.log('[AutoUpdater] Development modu - guncelleme kontrolu devre disi');
+}
+
+// ── Güncellemeyi ekran boştayken kur ─────────────────────────────────────
+// İndirilen güncelleme, müşteri sipariş/ödeme görürken uygulamayı kapatmasın diye
+// ekran boşa düşene kadar bekletilir: açık sipariş yok ve 2 dk'dır POS'tan istek
+// gelmemiş olmalı. POS /clear göndermeden kapanırsa diye 30 dk hareketsizlikte
+// sipariş açık görünse bile kurulur. Uygulama kapanırken de kurulur (autoInstallOnAppQuit).
+const BOSTA_BEKLEME_MS = 2 * 60 * 1000;
+const ZORLA_KUR_MS = 30 * 60 * 1000;
+let aktifSiparis = false;
+let sonEkranHareketi = 0;
+let guncellemeZamanlayici = null;
+
+function ekranHareketi(aktif) {
+  sonEkranHareketi = Date.now();
+  if (typeof aktif === 'boolean') aktifSiparis = aktif;
+}
+
+function guncellemeyiBostaKur() {
+  if (guncellemeZamanlayici) return;
+  const dene = () => {
+    const sessizlik = Date.now() - sonEkranHareketi;
+    const bosta = sessizlik >= BOSTA_BEKLEME_MS && (!aktifSiparis || sessizlik >= ZORLA_KUR_MS);
+    if (!bosta) return;
+    clearInterval(guncellemeZamanlayici);
+    console.log('[AutoUpdater] Ekran bosta - guncelleme kuruluyor...');
+    autoUpdater.quitAndInstall();
+  };
+  guncellemeZamanlayici = setInterval(dene, 30 * 1000);
+  dene();
 }
 
 function createWindow() {
@@ -205,11 +230,15 @@ function createHttpServer() {
     if (Object.prototype.hasOwnProperty.call(payload, 'arkaPlanResmi')) {
       payload.arkaPlanResmi = resolveArkaPlanResmi(payload.arkaPlanResmi);
     }
+    if (payload.isCompleted === true) ekranHareketi(false);
+    else if (Array.isArray(payload.orderItems)) ekranHareketi(payload.orderItems.length > 0);
+    else ekranHareketi();
     if (win && win.webContents) win.webContents.send('data:update', payload);
     res.json({ ok: true });
   });
 
   api.post('/clear', (_req, res) => {
+    ekranHareketi(false);
     if (win && win.webContents) win.webContents.send('data:clear', { isCompleted: true });
     res.json({ ok: true });
   });
@@ -222,11 +251,13 @@ function createHttpServer() {
 
   api.post('/para-ustu', (req, res) => {
     const payload = req.body || {};
+    ekranHareketi();
     if (win && win.webContents) win.webContents.send('data:para-ustu', payload);
     res.json({ ok: true });
   });
 
   api.post('/hide-para-ustu', (req, res) => {
+    ekranHareketi();
     if (win && win.webContents) win.webContents.send('data:hide-para-ustu');
     res.json({ ok: true });
   });
@@ -248,6 +279,8 @@ function createHttpServer() {
   server = api.listen(HTTP_PORT, '127.0.0.1', () =>
     console.log(`[SecondScreen] Server çalışıyor: 127.0.0.1:${HTTP_PORT}`));
 }
+
+ipcMain.handle('app:version', () => app.getVersion());
 
 // IPC handler - logo'ya 5 kere tıklama ile kapat
 ipcMain.on('app:quit', () => {
@@ -282,7 +315,7 @@ app.whenReady().then(() => {
       } catch (error) {
         console.log('[AutoUpdater] Periyodik kontrol hatasi (normal):', error.message);
       }
-    }, 30 * 1000); // 30 saniye - TEST İÇİN
+    }, 5 * 60 * 1000);
   }
 });
 
